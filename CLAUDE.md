@@ -58,7 +58,7 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 
 - **ci-lint** (`.github/workflows/ci-lint.yml`): runs all linters
   on PRs to `main` via the `pre-commit` job, which calls the reusable workflow
-  `jay-withers/template-pipelines/.github/workflows/pre-commit.yml` (pinned by
+  `jay-withers/workflows/.github/workflows/pre-commit.yml` (pinned by
   commit SHA, with the tag as a comment) rather than inlining the steps. Because
   it's a reusable-workflow call, the status-check context it reports on a PR is
   `pre-commit / Pre-commit` (`<caller job id> / <reusable job name>`), not the
@@ -68,7 +68,7 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 - **cd-tag** (`.github/workflows/cd-tag.yml`): auto-creates a semver tag (and a
   matching GitHub release) on every merge to `main` from the Conventional
   Commits since the last release, via the shared
-  `jay-withers/template-pipelines/.github/workflows/release.yml` reusable
+  `jay-withers/workflows/.github/workflows/release.yml` reusable
   workflow (default bump: patch).
 - **ci-terraform** (`.github/workflows/ci-terraform.yml`): a `changes` job
   (`dorny/paths-filter`) gates a `plan` job (`terraform plan` on `terraform/`)
