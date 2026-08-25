@@ -4,19 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo does
 
-A language-agnostic GitHub repository template. It provides a dev container,
-generic pre-commit hooks, PR/merge CI workflows (linting via a shared reusable
-workflow, and auto-tagging on merge), Renovate dependency updates, Conventional
-Commits enforcement, and Makefile + branch-protection scaffolding. It ships no
-application code on purpose — a repo created from it adds its own source and
-layers project-specific hooks/CI on top of this baseline.
+Started as a language-agnostic GitHub repository template (dev container,
+generic pre-commit hooks, PR/merge CI workflows, Renovate, Conventional
+Commits enforcement, Makefile + branch-protection scaffolding) and now also
+carries this account's own application: a `terraform/` root module, in
+`terraform/`, that creates and manages every repository under
+`github.com/jay-withers` — including this one — via the
+`integrations/github` provider. See `terraform/README.md` for the module
+itself; the rest of this file still covers the template baseline it's built
+on.
 
 ## Dev container
 
 The repo is built around the dev container at `.devcontainer/devcontainer.json`,
-which uses the image `ghcr.io/jay-withers/dev-containers/base:latest` and runs
+which uses the `ghcr.io/jay-withers/dev-containers/terraform` image (the same
+one `terraform-root-aks` uses — installs `terraform`/`tfenv`, `tflint`,
+`terraform-docs` and `checkov` on top of the generic `base` image) and runs
 `make install` on creation to wire up the pre-commit hooks. Prefer working
-inside the container so tooling versions match CI.
+inside the container so tooling versions match CI. **Editing
+`devcontainer.json` doesn't affect an already-running container** — rebuild
+it (VS Code: "Dev Containers: Rebuild Container") to pick up an image change.
 
 ## Commands
 
@@ -26,6 +33,7 @@ inside the container so tooling versions match CI.
 make install           # install pre-commit hooks (run once after cloning)
 make protect-branch    # configure GitHub repo settings (auto-merge, branch protection) — see scripts/protect-branch.sh; override BRANCH/CHECKS to match your repo's checks
 make lint              # run all pre-commit hooks against every file
+make init/fmt/validate/plan/apply/destroy  # terraform/ — see terraform/README.md for required auth
 ```
 
 ## Commit messages
@@ -62,6 +70,15 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   Commits since the last release, via the shared
   `jay-withers/template-pipelines/.github/workflows/release.yml` reusable
   workflow (default bump: patch).
+- **ci-terraform** (`.github/workflows/ci-terraform.yml`): a `changes` job
+  (`dorny/paths-filter`) gates a `plan` job (`terraform plan` on `terraform/`)
+  so it runs only when a PR touches Terraform, behind a `ci-terraform` gate
+  job that always runs and is the check required in the ruleset — same shape
+  as `terraform-root-aks`'s `ci-terraform`, except auth is a PAT
+  (`TF_GITHUB_TOKEN` secret) rather than Azure OIDC, since the GitHub
+  provider has no OIDC federation. Plan-only: nothing applies in CI (see
+  Terraform below), so every plan starts from empty state and always shows
+  each resource as "to import" first — expected, not a failure.
 
 ## Renovate
 
@@ -106,3 +123,28 @@ still blocked on both; only the "someone else must approve" step is dropped for
 personal repos. Override with `APPROVALS_REQUIRED=<n>` if you add collaborators
 and want human review enforced (Renovate's PRs will then need a separate
 auto-approve app, e.g. Mend's renovate-approve, to merge).
+
+This script is still what a **brand-new** repo created from this template
+runs once, by hand, before it exists anywhere else. For any repo listed in
+`terraform/terraform.tfvars`'s `var.repos` (every jay-withers repo as of this
+writing), `terraform/ruleset.tf` is the source of truth instead — don't run
+`make protect-branch` against one of those, since a manual ruleset change
+would just get reverted (or fought over) on the next `terraform apply`. Add a
+new repo here only after it's been created and, ideally, once it's about to
+be folded into `var.repos`.
+
+## Terraform
+
+`terraform/` creates and manages every jay-withers GitHub repository, this
+one included, via the `integrations/github` provider — see
+`terraform/README.md` for the module itself (what it manages, state, auth)
+and `make init`/`fmt`/`validate`/`plan`/`apply`/`destroy` above. It
+normalizes every repo onto the settings `terraform-root-aks` had configured
+by hand (squash-only merge methods, delete-branch-on-merge, the same
+"Protect main" ruleset shape), overriding only each repo's description,
+topics, and required status checks. State is **local and gitignored, never
+committed** — no remote backend. `imports.tf`'s `import` blocks make that
+safe: losing state just means the next plan/apply re-imports every resource
+from live GitHub data first. The tradeoff is no CI apply — `ci-terraform`
+only plans; run `make apply` locally after merging a Terraform change. See
+`terraform/README.md` for the full reasoning.

@@ -17,3 +17,9 @@ Thumbs.db
 # Logs and temp files
 *.log
 tmp/
+
+# Terraform - state is local-only and never committed (see terraform/README.md).
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log*

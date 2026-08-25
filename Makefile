@@ -8,7 +8,7 @@ BRANCH ?= main
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install protect-branch lint
+.PHONY: help install protect-branch lint init fmt validate plan apply destroy
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -23,3 +23,21 @@ protect-branch: ## Configure GitHub repo settings for a template-derived repo (a
 
 lint: ## Run all pre-commit hooks against every file
 	pre-commit run --all-files
+
+init: ## terraform init (see terraform/README.md for required auth)
+	terraform -chdir=terraform init
+
+fmt: ## terraform fmt -recursive
+	terraform -chdir=terraform fmt -recursive
+
+validate: init ## terraform init + validate
+	terraform -chdir=terraform validate
+
+plan: init ## terraform init + plan
+	terraform -chdir=terraform plan
+
+apply: init ## terraform init + apply
+	terraform -chdir=terraform apply
+
+destroy: init ## terraform init + destroy
+	terraform -chdir=terraform destroy
