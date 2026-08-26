@@ -1,10 +1,12 @@
-# template-generic-repo
+# github-repos
 
-A language-agnostic GitHub repository template. It gives a new repo a working
-baseline on day one — a dev container, generic pre-commit hooks, PR/merge CI
-workflows, Renovate dependency updates, Conventional Commits enforcement, and
-branch-protection scaffolding — with no application code, so you add your own
-source and layer project-specific tooling on top.
+Started from a language-agnostic GitHub repository template (dev container,
+generic pre-commit hooks, PR/merge CI workflows, Renovate dependency updates,
+Conventional Commits enforcement, branch-protection scaffolding) and now also
+this account's own application: a `terraform/` module that creates and
+manages every repository under `github.com/jay-withers`, this one included.
+See [`terraform/README.md`](terraform/README.md) for that module; the rest of
+this document covers the template baseline it's built on.
 
 ## Getting started
 
@@ -34,6 +36,7 @@ Run `make` (or `make help`) to list the available targets:
 make install           # install pre-commit hooks (run once after cloning)
 make protect-branch    # configure GitHub repo settings (auto-merge, branch protection) — override CHECKS if your repo's checks differ
 make lint              # run all pre-commit hooks against every file
+make plan / apply      # terraform/ — see terraform/README.md for required auth
 ```
 
 ## Pre-commit hooks
@@ -71,16 +74,19 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 
 - **`.github/workflows/ci-lint.yml`** — runs all pre-commit hooks on PRs
   to `main`, by calling the shared reusable workflow
-  `jay-withers/template-pipelines/.github/workflows/pre-commit.yml`. Its status
+  `jay-withers/workflows/.github/workflows/pre-commit.yml`. Its status
   check reports as `pre-commit / Pre-commit`.
 - **`.github/workflows/cd-tag.yml`** — on every merge to `main`, creates a
   semver tag and matching GitHub release from the Conventional Commits since the
   last release (default bump: patch), via
-  `jay-withers/template-pipelines/.github/workflows/release.yml`.
+  `jay-withers/workflows/.github/workflows/release.yml`.
+- **`.github/workflows/ci-terraform.yml`** — plans `terraform/` on PRs that
+  touch it (no CI apply — see [`terraform/README.md`](terraform/README.md)).
 
-Both pin the reusable workflow by commit SHA with the tag as a comment. Add your
-own `ci-*` workflows (build, test, etc.) as you add code, and require their
-checks in branch protection (below).
+Both `ci-lint`/`cd-tag` pin the reusable workflow by commit SHA with the tag
+as a comment. Add your own `ci-*` workflows (build, test, etc.) as you add
+code, and require their checks in branch protection (below) — or, for a repo
+managed by `terraform/`, in `var.repos` there instead.
 
 ## Renovate
 
@@ -100,7 +106,10 @@ as an account with admin rights on the new repo:
 make protect-branch
 ```
 
-This runs `scripts/protect-branch.sh` and is idempotent (safe to re-run). It:
+This is for a repo **not yet** managed by `terraform/` (see below) — running
+it against one of the repos listed in `terraform/terraform.tfvars`'s `var.repos`
+fights the next `terraform apply`. It runs `scripts/protect-branch.sh` and is
+idempotent (safe to re-run). It:
 
 - Enables repository **auto-merge**, which `renovate.json`'s `platformAutomerge`
   depends on — without it, Renovate's PRs sit fully green forever with nothing
@@ -128,22 +137,33 @@ The `pre-commit` job calls a reusable workflow, so its context is
 bare `pre-commit` — requiring the bare name leaves the check "Expected" forever.
 Confirm the exact context names for your repo's workflows with `gh pr checks`.
 
+## Managing GitHub repos with Terraform
+
+`terraform/` creates and manages every jay-withers GitHub repository —
+including this one — via the `integrations/github` provider, normalizing
+each onto the settings `terraform-root-aks` had configured by hand. State is
+local, gitignored, and never committed; applying is local-only for now (CI
+only plans). See [`terraform/README.md`](terraform/README.md) for what it
+manages, the state/auth tradeoffs, and the PAT it needs.
+
 ## Structure
 
 ```text
 .devcontainer/
-  devcontainer.json    # dev container (ghcr.io/jay-withers/dev-containers/base)
+  devcontainer.json    # dev container (ghcr.io/jay-withers/dev-containers/terraform)
 .github/
   workflows/
     ci-lint.yml        # lints all files on PRs to main (reusable workflow)
     cd-tag.yml         # auto-tags + releases on merge to main (semver, conventional commits)
+    ci-terraform.yml   # plans terraform/ on PRs that touch it (no CI apply)
 .editorconfig          # baseline editor settings (aligned with pre-commit hooks)
 .gitattributes         # git-level LF normalization
 .pre-commit-config.yaml
 commitlint.config.js   # commitlint (Conventional Commits) config
 renovate.json          # automated dependency updates
 scripts/
-  protect-branch.sh    # one-time GitHub settings (auto-merge, branch protection ruleset)
+  protect-branch.sh    # one-time GitHub settings for a repo not yet in terraform/
+terraform/              # manages every jay-withers GitHub repo (see terraform/README.md)
 CLAUDE.md              # guidance for Claude Code
 LICENSE
 Makefile

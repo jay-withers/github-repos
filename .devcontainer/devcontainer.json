@@ -1,17 +1,27 @@
 {
-  "name": "generic",
-  "image": "ghcr.io/jay-withers/dev-containers/base:latest@sha256:8b2a6ea78cdd77e00f1bf31bc976f73611466213e344194edc5acf82cfeea67f",
+  "name": "terraform",
+  "image": "ghcr.io/jay-withers/dev-containers/terraform:v0.9.2@sha256:c2ecec49987f00a16e190a95f950da504cad688a59c91e199dc9e3fb66d89c1a",
   "customizations": {
     "vscode": {
       "extensions": [
         "anthropic.claude-code",
+        "hashicorp.terraform",
         "redhat.vscode-yaml",
         "github.vscode-github-actions",
         "github.vscode-pull-request-github",
         "eamodio.gitlens",
         "mhutchie.git-graph",
         "editorconfig.editorconfig"
-      ]
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        },
+        "[terraform-vars]": {
+          "editor.defaultFormatter": "hashicorp.terraform"
+        }
+      }
     }
   },
   "remoteUser": "vscode",
