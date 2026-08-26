@@ -63,8 +63,11 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   it's a reusable-workflow call, the status-check context it reports on a PR is
   `pre-commit / Pre-commit` (`<caller job id> / <reusable job name>`), not the
   bare `pre-commit` job id — see the `CHECKS` note under GitHub repo settings.
-  The reusable workflow's `terraform` input defaults to `false` and is left
-  unset here.
+  The reusable workflow's `terraform` input defaults to `false` but is set to
+  `true` here, since `.pre-commit-config.yaml` runs `terraform_fmt`/
+  `terraform_validate` against `terraform/` and those hooks need a real
+  Terraform binary on the runner (without this the job fails with "Neither
+  Terraform nor OpenTofu binary could be found").
 - **cd-tag** (`.github/workflows/cd-tag.yml`): auto-creates a semver tag (and a
   matching GitHub release) on every merge to `main` from the Conventional
   Commits since the last release, via the shared
