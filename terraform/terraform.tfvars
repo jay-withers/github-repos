@@ -69,3 +69,13 @@ repos = {
     ]
   }
 }
+
+# The "shared" Terraform state storage account this repo creates access to —
+# see state.tf/identities.tf, and scripts/bootstrap-state.ps1 for how the
+# account itself is created. To add a consumer: add its container name to
+# scripts/containers.json and re-run that script, then add an entry here.
+state_consumers = {
+  "github-repos" = {
+    github_repo = "jay-withers/github-repos"
+  }
+}
