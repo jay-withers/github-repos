@@ -31,8 +31,7 @@ it (VS Code: "Dev Containers: Rebuild Container") to pick up an image change.
 
 ```bash
 make install           # install pre-commit hooks (run once after cloning)
-make protect-branch    # configure GitHub repo settings (auto-merge, branch protection) — see scripts/protect-branch.sh; override BRANCH/CHECKS to match your repo's checks
-make lint              # run all pre-commit hooks against every file
+make lint               # run all pre-commit hooks against every file
 make init/fmt/validate/plan/apply/destroy  # terraform/ — see terraform/README.md for required auth
 ```
 
@@ -62,12 +61,12 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   commit SHA, with the tag as a comment) rather than inlining the steps. Because
   it's a reusable-workflow call, the status-check context it reports on a PR is
   `pre-commit / Pre-commit` (`<caller job id> / <reusable job name>`), not the
-  bare `pre-commit` job id — see the `CHECKS` note under GitHub repo settings.
-  The reusable workflow's `terraform` input defaults to `false` but is set to
-  `true` here, since `.pre-commit-config.yaml` runs `terraform_fmt`/
-  `terraform_validate` against `terraform/` and those hooks need a real
-  Terraform binary on the runner (without this the job fails with "Neither
-  Terraform nor OpenTofu binary could be found").
+  bare `pre-commit` job id — see the note on `required_status_checks` under
+  GitHub repo settings. The reusable workflow's `terraform` input defaults to
+  `false` but is set to `true` here, since `.pre-commit-config.yaml` runs
+  `terraform_fmt`/`terraform_validate` against `terraform/` and those hooks
+  need a real Terraform binary on the runner (without this the job fails with
+  "Neither Terraform nor OpenTofu binary could be found").
 - **cd-tag** (`.github/workflows/cd-tag.yml`): auto-creates a semver tag (and a
   matching GitHub release) on every merge to `main` from the Conventional
   Commits since the last release, via the shared
@@ -88,9 +87,9 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 `renovate.json` extends the shared preset
 `github>jay-withers/template-renovate` (see that repo for the policy: batched
 Monday schedule, automerge of non-major dev deps/pins/digests via
-`platformAutomerge` — which needs repo-level auto-merge, see
-`make protect-branch` — dependency dashboard, semantic commits, and the
-`pre-commit` manager that keeps frozen hook revisions in
+`platformAutomerge` — which needs repo-level auto-merge, set by `terraform/`
+(see GitHub repo settings below) — dependency dashboard, semantic commits,
+and the `pre-commit` manager that keeps frozen hook revisions in
 `.pre-commit-config.yaml` up to date), plus a local `autoApprove: true` so
 those low-risk updates can clear the branch-protection review requirement.
 Docker/GitHub Actions/Terraform/npm groupings are included in the shared
@@ -98,43 +97,31 @@ preset and activate automatically if a derived repo adds those ecosystems.
 
 ## GitHub repo settings
 
-`scripts/protect-branch.sh` (run via `make protect-branch`, args: `BRANCH=<name>`
-default `main`, `CHECKS="<newline-separated contexts>"` defaulting to this
-template's single check `pre-commit / Pre-commit` — see the script's usage
-comment; override for a consuming repo whose CI workflows differ. Newline-,
-not space-, separated because a context name can itself contain spaces, e.g.
-the reusable-workflow context above) sets the platform settings that can't live
-in files: repo-level auto-merge (required for `renovate.json`'s
-`platformAutomerge`), delete-branch-on-merge, and a ruleset on the target branch
-requiring the given status checks and some number of approving reviews
-(`APPROVALS_REQUIRED` to override; default 1 on org-owned repos, 0 on user-owned
-repos — see next paragraph), with the Renovate GitHub App (looked up via `gh api
-apps/renovate`) and the repo Admin role (built-in `RepositoryRole` actor_id 5)
-exempted as `bypass_mode: always` bypass actors on both rules. It deletes every
-ruleset already on the repo before creating this one, so re-runs replace rather
-than accumulate — it uses `gh api` and is otherwise idempotent (safe to re-run
-after renaming the repo or reinstalling Renovate).
+`terraform/repository.tf` and `terraform/ruleset.tf` (see `## Terraform`
+below) are the sole mechanism for the platform settings that can't live in
+files: repo-level auto-merge (required for `renovate.json`'s
+`platformAutomerge`), delete-branch-on-merge, and a "Protect main" ruleset on
+`main` requiring each repo's status checks (`required_status_checks` in
+`terraform/terraform.tfvars`'s `var.repos`) and 0 approving reviews, with the
+Renovate GitHub App (looked up via `gh api apps/renovate`) and the repo Admin
+role (built-in `RepositoryRole` actor_id 5) exempted as `bypass_mode: always`
+bypass actors on the ruleset.
 
-GitHub only honours ruleset `bypass_actors` (the Renovate app entry) on repos
-owned by an **organisation**. On a personal (User-owned) repo that entry is
-accepted by the API but silently has no effect, so a required-review rule would
-block Renovate's own PRs forever (Renovate can't review its own PR and nothing
-else is exempted). The script therefore looks up the owner type (`gh api
-users/<owner>`) and defaults `APPROVALS_REQUIRED` to 0 on user-owned repos and 1
-on orgs. Status checks are still required and direct pushes to the branch are
-still blocked on both; only the "someone else must approve" step is dropped for
-personal repos. Override with `APPROVALS_REQUIRED=<n>` if you add collaborators
-and want human review enforced (Renovate's PRs will then need a separate
-auto-approve app, e.g. Mend's renovate-approve, to merge).
+GitHub only honours ruleset `bypass_actors` on repos owned by an
+**organisation** — on this personal (User-owned) account those entries are
+accepted by the API but silently have no effect. That's fine here:
+`required_approving_review_count` is fixed at 0 for every repo, so there's no
+review requirement for the (currently inert) bypass actors to unblock in the
+first place — a working exemption for the Renovate app only starts to matter
+if the account ever moves to an org and reviews get required, which is why
+the bypass actors are declared anyway. Status checks are still required and
+direct pushes to `main` are still blocked.
 
-This script is still what a **brand-new** repo created from this template
-runs once, by hand, before it exists anywhere else. For any repo listed in
-`terraform/terraform.tfvars`'s `var.repos` (every jay-withers repo as of this
-writing), `terraform/ruleset.tf` is the source of truth instead — don't run
-`make protect-branch` against one of those, since a manual ruleset change
-would just get reverted (or fought over) on the next `terraform apply`. Add a
-new repo here only after it's been created and, ideally, once it's about to
-be folded into `var.repos`.
+Every jay-withers repo, this one included, is already listed in
+`terraform/terraform.tfvars`'s `var.repos`, so this is the only mechanism —
+there's no separate one-time bootstrap step anymore. A genuinely new repo
+(not yet in `var.repos`) simply has GitHub's default settings until it's
+added there and `make apply` is run.
 
 ## Terraform
 

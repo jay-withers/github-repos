@@ -15,9 +15,9 @@ provider.
 
 Settings common to every repo live once in `locals.tf` (`repo_defaults`,
 `ruleset_defaults`), taken from `jay-withers/terraform-root-aks`'s live
-configuration — the repo these were originally hand-set on via
-`scripts/protect-branch.sh`. Only what actually differs per repo
-(description, topics, required status checks) lives in `var.repos`.
+configuration — the repo these were originally hand-set on. Only what
+actually differs per repo (description, topics, required status checks)
+lives in `var.repos`.
 
 `terraform.tfvars` is committed (not gitignored) — unlike the usual
 convention of using it for untracked, per-machine or secret values, here it

@@ -21,12 +21,12 @@ this document covers the template baseline it's built on.
    make install
    ```
 
-4. Configure the GitHub-side settings that can't be templated as files (see
-   [Configuring GitHub](#configuring-github-for-a-repo-created-from-this-template)):
-
-   ```bash
-   make protect-branch
-   ```
+4. Add the new repo to `terraform/terraform.tfvars`'s `var.repos` and run
+   `make apply` (see [Managing GitHub repos with
+   Terraform](#managing-github-repos-with-terraform)) to pick up the
+   settings that can't be templated as files — auto-merge, branch
+   protection, required status checks. Until then, the repo just has
+   GitHub's defaults.
 
 ## Commands
 
@@ -34,9 +34,8 @@ Run `make` (or `make help`) to list the available targets:
 
 ```bash
 make install           # install pre-commit hooks (run once after cloning)
-make protect-branch    # configure GitHub repo settings (auto-merge, branch protection) — override CHECKS if your repo's checks differ
-make lint              # run all pre-commit hooks against every file
-make plan / apply      # terraform/ — see terraform/README.md for required auth
+make lint               # run all pre-commit hooks against every file
+make plan / apply       # terraform/ — see terraform/README.md for required auth
 ```
 
 ## Pre-commit hooks
@@ -85,57 +84,17 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 
 Both `ci-lint`/`cd-tag` pin the reusable workflow by commit SHA with the tag
 as a comment. Add your own `ci-*` workflows (build, test, etc.) as you add
-code, and require their checks in branch protection (below) — or, for a repo
-managed by `terraform/`, in `var.repos` there instead.
+code, and require their checks by adding them to the repo's
+`required_status_checks` in `terraform/terraform.tfvars`'s `var.repos` (see
+below).
 
 ## Renovate
 
 `renovate.json` extends `config:recommended` on a weekly schedule with
 auto-approve and automerge. `platformAutomerge` needs repo-level auto-merge to
-be enabled — `make protect-branch` does that. The `pre-commit` manager updates
-the frozen hook revisions in `.pre-commit-config.yaml`; add language/ecosystem
-managers as your repo grows.
-
-## Configuring GitHub for a repo created from this template
-
-Some settings can't be templated as files and need to be set once per repo via
-the GitHub API. Run, with the [`gh` CLI](https://cli.github.com) authenticated
-as an account with admin rights on the new repo:
-
-```bash
-make protect-branch
-```
-
-This is for a repo **not yet** managed by `terraform/` (see below) — running
-it against one of the repos listed in `terraform/terraform.tfvars`'s `var.repos`
-fights the next `terraform apply`. It runs `scripts/protect-branch.sh` and is
-idempotent (safe to re-run). It:
-
-- Enables repository **auto-merge**, which `renovate.json`'s `platformAutomerge`
-  depends on — without it, Renovate's PRs sit fully green forever with nothing
-  to merge them.
-- Enables **delete branch on merge**, so merged Renovate branches don't pile up.
-- Deletes every ruleset currently on the repo, then creates a fresh one on the
-  target branch (default `main`, override with `BRANCH=<name>`) requiring the
-  given status checks and 1 approving review (override with
-  `APPROVALS_REQUIRED`), with the Renovate GitHub App and the repo **Admin**
-  role exempted as bypass actors on both. Because it clears existing rulesets
-  first, re-runs replace rather than accumulate — don't run it against a repo
-  that has unrelated rulesets you want to keep.
-
-`CHECKS` defaults to this template's single required status-check context,
-`pre-commit / Pre-commit`. It's a **newline-separated** list (not space, since a
-context name can itself contain spaces, like the reusable-workflow context
-above) — override it as you add CI workflows:
-
-```bash
-make protect-branch CHECKS="$(printf 'pre-commit / Pre-commit\nbuild\ntest')"
-```
-
-The `pre-commit` job calls a reusable workflow, so its context is
-`<caller job id> / <reusable job name>` = `pre-commit / Pre-commit`, **not** the
-bare `pre-commit` — requiring the bare name leaves the check "Expected" forever.
-Confirm the exact context names for your repo's workflows with `gh pr checks`.
+be enabled — Terraform does that once a repo is added to `var.repos` (see
+below). The `pre-commit` manager updates the frozen hook revisions in
+`.pre-commit-config.yaml`; add language/ecosystem managers as your repo grows.
 
 ## Managing GitHub repos with Terraform
 
@@ -161,8 +120,6 @@ manages, the state/auth tradeoffs, and the PAT it needs.
 .pre-commit-config.yaml
 commitlint.config.js   # commitlint (Conventional Commits) config
 renovate.json          # automated dependency updates
-scripts/
-  protect-branch.sh    # one-time GitHub settings for a repo not yet in terraform/
 terraform/              # manages every jay-withers GitHub repo (see terraform/README.md)
 CLAUDE.md              # guidance for Claude Code
 LICENSE
