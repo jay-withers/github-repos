@@ -38,12 +38,11 @@ locals {
   }
 
   # Bypass actors on every ruleset: the repo Admin role, and the Renovate
-  # GitHub App (id from `gh api apps/renovate --jq .id`). Both `always`,
-  # matching scripts/protect-branch.sh. GitHub only honours bypass_actors on
-  # organization-owned repos - jay-withers is a User account, so this is
-  # currently inert here, but declaring it keeps this repo's ruleset
-  # identical in shape to every other repo's, and it starts working for free
-  # if the account ever moves to an org. See CLAUDE.md.
+  # GitHub App (id from `gh api apps/renovate --jq .id`). Both `always`. GitHub
+  # only honours bypass_actors on organization-owned repos - jay-withers is a
+  # User account, so this is currently inert here, but declaring it keeps this
+  # repo's ruleset identical in shape to every other repo's, and it starts
+  # working for free if the account ever moves to an org. See CLAUDE.md.
   admin_role_id   = 5
   renovate_app_id = 2740
 
