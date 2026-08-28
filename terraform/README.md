@@ -117,3 +117,58 @@ Add an entry to `var.repos` in `terraform.tfvars` (a brand-new repo needs no
 entry in `locals.existing_ruleset_ids` — that's only for repos with a
 ruleset to import) and open a PR. `ci-terraform` plans it; after merging,
 run `make apply` locally to actually create the repo and its ruleset.
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+| ---- | ------- |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.7 |
+| <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) | ~> 4.0 |
+| <a name="requirement_github"></a> [github](#requirement\_github) | ~> 6.0 |
+
+## Providers
+
+| Name | Version |
+| ---- | ------- |
+| <a name="provider_azurerm"></a> [azurerm](#provider\_azurerm) | 4.81.0 |
+| <a name="provider_github"></a> [github](#provider\_github) | 6.13.0 |
+
+## Modules
+
+| Name | Source | Version |
+| ---- | ------ | ------- |
+| <a name="module_state_naming"></a> [state\_naming](#module\_state\_naming) | Azure/naming/azurerm | ~> 0.4 |
+
+## Resources
+
+| Name | Type |
+| ---- | ---- |
+| [azurerm_federated_identity_credential.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/federated_identity_credential) | resource |
+| [azurerm_role_assignment.state_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
+| [azurerm_user_assigned_identity.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |
+| [github_repository.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository) | resource |
+| [github_repository_ruleset.main](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset) | resource |
+| [azurerm_resource_group.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
+| [azurerm_storage_account.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/storage_account) | data source |
+| [azurerm_storage_container.consumer](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/storage_container) | data source |
+| [azurerm_subscription.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/subscription) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+| ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_location"></a> [location](#input\_location) | Azure region for the identities this repo creates. See identities.tf. | `string` | `"westeurope"` | no |
+| <a name="input_repos"></a> [repos](#input\_repos) | GitHub repositories to manage, keyed by repo name. | <pre>map(object({<br/>    description = optional(string, "")<br/>    topics      = optional(list(string), [])<br/>    required_status_checks = list(object({<br/>      context        = string<br/>      integration_id = optional(number)<br/>    }))<br/>  }))</pre> | n/a | yes |
+| <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name) | The shared state resource group. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $ResourceGroupName. Changing this means changing the script and re-running it first. | `string` | `"rg-tfstate-shared"` | no |
+| <a name="input_state_consumers"></a> [state\_consumers](#input\_state\_consumers) | One entry per consumer of the shared state storage account - repos that<br/>need state storage but aren't part of the azure-landingzone landing zone<br/>(that side has its own equivalent in azure-landingzone/terraform/bootstrap,<br/>which reuses landingzones' vended identities where one exists). Every<br/>entry here always gets a brand new identity, since none of these repos<br/>have one already.<br/><br/>The map key names the consumer and is also its container name - containers<br/>are created by scripts/bootstrap-state.ps1, so add the key to that<br/>script's containers.json (and re-run it) before adding it here, or the<br/>container data source lookup fails. | <pre>map(object({<br/>    github_repo        = string<br/>    federated_subjects = optional(map(string))<br/>  }))</pre> | `{}` | no |
+| <a name="input_storage_account_name"></a> [storage\_account\_name](#input\_storage\_account\_name) | The shared state storage account. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $StorageAccountName. Changing this means changing the script and re-running it first. | `string` | `"sttfsharedjw"` | no |
+
+## Outputs
+
+| Name | Description |
+| ---- | ----------- |
+| <a name="output_repository_urls"></a> [repository\_urls](#output\_repository\_urls) | HTML URL of every managed repository, keyed by name. |
+| <a name="output_state_backend_config"></a> [state\_backend\_config](#output\_state\_backend\_config) | Per consumer: the azurerm backend block values for its own backend.tf. |
+| <a name="output_state_github_secrets"></a> [state\_github\_secrets](#output\_state\_github\_secrets) | Repository variables to set on each state consumer's repo. |
+<!-- END_TF_DOCS -->

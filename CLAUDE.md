@@ -53,12 +53,31 @@ add its formatter/linter hooks here rather than replacing these.
 
 On top of that language-agnostic baseline, this repo's own `terraform/`
 application adds `antonbabenko/pre-commit-terraform`'s `terraform_fmt`/
-`terraform_validate`, plus a local, unpinned `terraform-standards` hook
-(`scripts/check-terraform-standards.sh`) enforcing this repo's file-layout
-house rules: `data`/`locals`/`variable`/`output` blocks each live in their
-own dedicated file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or
-a `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
-`terraform{}`/`provider{}` blocks share a single `versions.tf`.
+`terraform_validate`/`terraform_docs` (the latter appends a generated
+Requirements/Providers/Modules/Resources/Inputs/Outputs block to the bottom
+of `terraform/README.md`, between `<!-- BEGIN_TF_DOCS -->`/`<!-- END_TF_DOCS
+-->` markers, on every hook run - the hand-written prose above those markers
+is never touched), plus three local, unpinned hooks aligned with
+[jay-withers/template-repo-terraform-root](https://github.com/jay-withers/template-repo-terraform-root/blob/main/.pre-commit-config.yaml)'s
+own (see each script's header comment for exactly what's copied vs. adapted):
+
+- `scripts/check-tf-file-layout.sh` - this repo's file-layout house rules:
+  `data`/`locals`/`variable`/`output` blocks each live in their own dedicated
+  file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or a
+  `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
+  `terraform{}`/`provider{}` blocks share a single `versions.tf`. The
+  `data`/`terraform`/`provider` rules are this repo's own addition on top of
+  the template's (which only covers `locals`/`variable`/`output`).
+- `scripts/tflint.sh` / `scripts/checkov.sh` - run against `terraform/` with
+  `terraform.tfvars` applied (`terraform/.tflint.hcl` enables the `azurerm`
+  ruleset plugin), replacing `pre-commit-terraform`'s own
+  `terraform_tflint`/`terraform_checkov` hooks entirely. The template repo
+  loops this per `terraform/environments/*.tfvars` file since it deploys the
+  same module to several environments; this repo has exactly one deployment
+  and one `terraform.tfvars`, so the loop collapses to a single invocation.
+  `checkov.sh` skips `CKV_GIT_1` ("repository should be private") -
+  `repo_defaults.visibility` in `locals.tf` deliberately makes every managed
+  repo public, so that finding is by design, not a gap.
 
 ## CI
 
