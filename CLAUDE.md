@@ -51,6 +51,15 @@ checks, and `no-commit-to-branch` which blocks direct commits to `main`),
 `commit-msg` stage). When a repo derived from this template gains a language,
 add its formatter/linter hooks here rather than replacing these.
 
+On top of that language-agnostic baseline, this repo's own `terraform/`
+application adds `antonbabenko/pre-commit-terraform`'s `terraform_fmt`/
+`terraform_validate`, plus a local, unpinned `terraform-standards` hook
+(`scripts/check-terraform-standards.sh`) enforcing this repo's file-layout
+house rules: `data`/`locals`/`variable`/`output` blocks each live in their
+own dedicated file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or
+a `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
+`terraform{}`/`provider{}` blocks share a single `versions.tf`.
+
 ## CI
 
 Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery):

@@ -60,3 +60,15 @@ repos:
     hooks:
       - id: terraform_fmt
       - id: terraform_validate
+
+  # Local, not a pinned third-party repo - this is a house rule specific to
+  # this repo, not a general Terraform lint. Runs after terraform_fmt so
+  # block detection can rely on top-level blocks being flush left.
+  - repo: local
+    hooks:
+      - id: terraform-standards
+        name: terraform file layout standards
+        description: "data/locals/variables/outputs each get a dedicated file, terraform{}/provider{} share versions.tf - see scripts/check-terraform-standards.sh"
+        entry: scripts/check-terraform-standards.sh
+        language: script
+        files: \.tf$
