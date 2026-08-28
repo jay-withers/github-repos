@@ -1,10 +1,9 @@
 # The set of repositories this module manages. To add a new repo: add an
-# entry here (a brand new repo doesn't need an `existing_ruleset_ids` entry in
-# locals.tf - only repos that already have a ruleset to import do) and open a
-# PR. `required_status_checks` must match the exact status-check context each
-# repo's CI reports - see CLAUDE.md's note on this (a reusable-workflow call
-# reports as `<caller job id> / <reusable job name>`, not the bare job id),
-# and confirm with `gh pr checks` against that repo.
+# entry here and open a PR. `required_status_checks` must match the exact
+# status-check context each repo's CI reports - see CLAUDE.md's note on this
+# (a reusable-workflow call reports as `<caller job id> / <reusable job
+# name>`, not the bare job id), and confirm with `gh pr checks` against that
+# repo.
 repos = {
   "github-repos" = {
     description = "Terraform that creates and manages every jay-withers GitHub repository, including this one"

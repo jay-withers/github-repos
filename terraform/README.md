@@ -33,30 +33,20 @@ control and goes through PR review like everything else.
 
 ## State
 
-Until the migration below, state is **local and never committed** — no
-remote backend, and `terraform.tfstate` is gitignored. That means:
+Remote: the `backend "azurerm"` block lives in `versions.tf` (not a separate
+`backend.tf`), pointing at the "shared" storage account this module also
+manages access to (see "What it manages" above) — `rg-tfstate-shared` /
+`sttfsharedjw` / the `github-repos` container. That account is created by
+`../scripts/bootstrap-state.ps1`, not Terraform — see its header comment for
+why. Durability comes from the storage account's blob versioning and 30-day
+soft-delete (also set up by that script), not from any Terraform-side
+recovery mechanism — there's no `import` block anywhere in this module,
+deliberately: every resource it manages already exists in state, so plans
+diff against real state rather than trying to re-derive it from live GitHub
+data.
 
-- It only ever exists on whichever machine ran `terraform apply` last. Losing
-  it (a fresh clone, a wiped devcontainer) is not a disaster: `imports.tf`'s
-  `import` blocks cover every resource, so the next `terraform plan`/`apply`
-  just re-imports everything from live GitHub data before computing a diff.
-  Expect a from-scratch plan to always list every resource as "to import" —
-  that's this recovering state, not drift.
-- No locking, and no CI apply (see below) — so don't run `make apply` from
-  two places at once.
-- `.terraform/` (the provider plugin cache) is also gitignored.
-
-**Migrating to remote state**: `backend.tf` is already committed, pointing at
-the "shared" storage account this module also manages access to (see "What
-it manages" above) — but adding it here does not switch anything over by
-itself. The one-time move is: run `../scripts/bootstrap-state.ps1` (creates
-the account — see its header comment for why that's not Terraform), `make
-apply` once against local state so this repo's own identity and RBAC grant
-exist, then `terraform -chdir=terraform init -migrate-state`. That one
-command carries every existing GitHub-managed resource's state, plus the new
-Azure resources, into the account together — everything above about
-re-importing from live GitHub data on a lost state file no longer applies
-once this has run.
+`.terraform/` (the provider plugin cache) is gitignored, same as any local
+`terraform.tfstate*` left over from before the backend was wired in.
 
 Applying is **local-only** for now: `ci-terraform` only plans on PRs (see
 below), nothing runs `terraform apply` in CI. Run `make apply` yourself after
@@ -80,8 +70,8 @@ the ruleset's Admin `bypass_actors` exemption:
   (CI never applies), but the ruleset/repository read endpoints still need an
   authenticated admin to see full settings.
 
-**Azure** — needed for `state.tf`/`identities.tf`, and (once `backend.tf` is
-active) for `terraform init` itself:
+**Azure** — needed for `state.tf`/`identities.tf`/`data.tf`, and for
+`terraform init` itself (the backend block in `versions.tf` is already active):
 
 - **Local**: Azure CLI, logged in, with Owner or Contributor + User Access
   Administrator on the subscription, and `ARM_SUBSCRIPTION_ID` exported (the
@@ -96,7 +86,9 @@ active) for `terraform init` itself:
   initializes the whole configuration, backend included, in one step, so
   there's no way to plan just the GitHub side without Azure credentials once
   a real backend is configured. Set the three variables from this repo's own
-  `state_github_secrets` output once the migration above has run.
+  `state_github_secrets` output (`terraform output state_github_secrets`,
+  after `make apply` has created this repo's identity — see "What it
+  manages" above) via `gh variable set`/`gh secret set`.
 
 Never paste either credential into chat, commits, or these files —
 `gitleaks` (pre-commit and CI) is only a backstop, not a substitute for care.
@@ -113,10 +105,9 @@ make apply     # terraform init + apply
 
 ## Adding a repository
 
-Add an entry to `var.repos` in `terraform.tfvars` (a brand-new repo needs no
-entry in `locals.existing_ruleset_ids` — that's only for repos with a
-ruleset to import) and open a PR. `ci-terraform` plans it; after merging,
-run `make apply` locally to actually create the repo and its ruleset.
+Add an entry to `var.repos` in `terraform.tfvars` and open a PR. `ci-terraform`
+plans it; after merging, run `make apply` locally to actually create the repo
+and its ruleset.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

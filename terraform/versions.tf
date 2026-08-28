@@ -1,5 +1,4 @@
 terraform {
-  # >= 1.7 for `for_each` on `import` blocks (see imports.tf).
   required_version = ">= 1.7"
 
   backend "azurerm" {

@@ -104,11 +104,12 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   (`dorny/paths-filter`) gates a `plan` job (`terraform plan` on `terraform/`)
   so it runs only when a PR touches Terraform, behind a `ci-terraform` gate
   job that always runs and is the check required in the ruleset — same shape
-  as `terraform-root-aks`'s `ci-terraform`, except auth is a PAT
-  (`TF_GITHUB_TOKEN` secret) rather than Azure OIDC, since the GitHub
-  provider has no OIDC federation. Plan-only: nothing applies in CI (see
-  Terraform below), so every plan starts from empty state and always shows
-  each resource as "to import" first — expected, not a failure.
+  as `terraform-root-aks`'s `ci-terraform`, except it authenticates twice:
+  Azure OIDC for the `azurerm` provider (gated on the `AZURE_CLIENT_ID`
+  repository variable — see terraform/README.md's Auth section), and a PAT
+  (`TF_GITHUB_TOKEN` secret) for the `github` provider, since that provider
+  has no OIDC federation of its own. Plan-only: nothing applies in CI (see
+  Terraform below).
 
 ## Renovate
 
@@ -160,9 +161,10 @@ and `make init`/`fmt`/`validate`/`plan`/`apply`/`destroy` above. It
 normalizes every repo onto the settings `terraform-root-aks` had configured
 by hand (squash-only merge methods, delete-branch-on-merge, the same
 "Protect main" ruleset shape), overriding only each repo's description,
-topics, and required status checks. State is **local and gitignored, never
-committed** — no remote backend. `imports.tf`'s `import` blocks make that
-safe: losing state just means the next plan/apply re-imports every resource
-from live GitHub data first. The tradeoff is no CI apply — `ci-terraform`
-only plans; run `make apply` locally after merging a Terraform change. See
+topics, and required status checks. State is **remote**, in the "shared"
+Terraform state storage account this module also manages access to (backend
+block in `versions.tf`) — durability comes from that account's blob
+versioning and soft-delete, not from any import/recovery mechanism in the
+module itself. The tradeoff is no CI apply — `ci-terraform` only plans; run
+`make apply` locally after merging a Terraform change. See
 `terraform/README.md` for the full reasoning.
