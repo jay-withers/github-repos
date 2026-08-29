@@ -35,14 +35,22 @@ resource "github_repository_ruleset" "main" {
       required_review_thread_resolution = local.ruleset_defaults.required_review_thread_resolution
     }
 
-    required_status_checks {
-      strict_required_status_checks_policy = true
+    # The whole block, not just required_check inside it, has to be
+    # conditional: the provider's schema requires at least one required_check
+    # when required_status_checks is present at all, so a repo with none
+    # (required_status_checks = [] in terraform.tfvars) needs this block
+    # omitted entirely rather than emitted empty.
+    dynamic "required_status_checks" {
+      for_each = length(each.value.required_status_checks) > 0 ? [each.value.required_status_checks] : []
+      content {
+        strict_required_status_checks_policy = true
 
-      dynamic "required_check" {
-        for_each = each.value.required_status_checks
-        content {
-          context        = required_check.value.context
-          integration_id = required_check.value.integration_id
+        dynamic "required_check" {
+          for_each = required_status_checks.value
+          content {
+            context        = required_check.value.context
+            integration_id = required_check.value.integration_id
+          }
         }
       }
     }

@@ -3,10 +3,10 @@ variable "repos" {
   type = map(object({
     description = optional(string, "")
     topics      = optional(list(string), [])
-    required_status_checks = list(object({
+    required_status_checks = optional(list(object({
       context        = string
       integration_id = optional(number)
-    }))
+    })), [])
   }))
   # No default - see terraform.tfvars for the actual repo list.
 }

@@ -68,9 +68,7 @@ repos = {
     ]
   }
 
-  "git-demo" = {
-    required_status_checks = []
-  }
+  "git-demo" = {}
 }
 
 # The "shared" Terraform state storage account this repo creates access to —
