@@ -56,7 +56,7 @@ repos:
         args: [--external-sources]
 
   # Local, not a pinned third-party repo - these are house rules/tooling
-  # specific to this repo (check-tf-file-layout.sh, tflint.sh, checkov.sh are
+  # specific to this repo (check-tf-standards.sh, tflint.sh, checkov.sh are
   # all adapted from jay-withers/template-repo-terraform-root's own
   # .pre-commit-config.yaml - see each script's header for what changed and
   # why). tflint/checkov replace antonbabenko/pre-commit-terraform's own
@@ -65,10 +65,10 @@ repos:
   # have no defaults, so an unresolved plan is far less useful to lint.
   - repo: local
     hooks:
-      - id: check-tf-file-layout
-        name: Check locals/variables/outputs/data file layout
-        description: "Fails if a locals/variable/output/data block isn't in a matching locals*.tf/variables*.tf/outputs*.tf/data*.tf file (or a terraform{}/provider{} block isn't in versions.tf)."
-        entry: scripts/check-tf-file-layout.sh
+      - id: check-tf-standards
+        name: Check Terraform file layout standards
+        description: "Fails if a locals/variable/output/data block isn't in a matching locals*.tf/variables*.tf/outputs*.tf/data*.tf file, or a terraform{}/provider{} block isn't in versions.tf."
+        entry: scripts/check-tf-standards.sh
         language: script
         pass_filenames: false
         files: \.tf$

@@ -61,7 +61,7 @@ is never touched), plus three local, unpinned hooks aligned with
 [jay-withers/template-repo-terraform-root](https://github.com/jay-withers/template-repo-terraform-root/blob/main/.pre-commit-config.yaml)'s
 own (see each script's header comment for exactly what's copied vs. adapted):
 
-- `scripts/check-tf-file-layout.sh` - this repo's file-layout house rules:
+- `scripts/check-tf-standards.sh` - this repo's file-layout house rules:
   `data`/`locals`/`variable`/`output` blocks each live in their own dedicated
   file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or a
   `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
