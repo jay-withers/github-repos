@@ -67,6 +67,10 @@ repos = {
       { context = "validate", integration_id = 15368 },
     ]
   }
+
+  "git-demo" = {
+    required_status_checks = []
+  }
 }
 
 # The "shared" Terraform state storage account this repo creates access to —
