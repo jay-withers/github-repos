@@ -61,13 +61,15 @@ is never touched), plus three local, unpinned hooks aligned with
 [jay-withers/template-repo-terraform-root](https://github.com/jay-withers/template-repo-terraform-root/blob/main/.pre-commit-config.yaml)'s
 own (see each script's header comment for exactly what's copied vs. adapted):
 
-- `scripts/check-tf-standards.sh` - this repo's file-layout house rules:
-  `data`/`locals`/`variable`/`output` blocks each live in their own dedicated
-  file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or a
-  `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
-  `terraform{}`/`provider{}` blocks share a single `versions.tf`. The
-  `data`/`terraform`/`provider` rules are this repo's own addition on top of
-  the template's (which only covers `locals`/`variable`/`output`).
+- `scripts/check-tf-standards.sh` - the file-layout house rules shared across
+  every jay-withers Terraform repo: `data`/`locals`/`variable`/`output` blocks
+  each live in their own dedicated file (`data.tf`, `locals.tf`,
+  `variables.tf`, `outputs.tf`, or a `<block-type>.<name>.tf` variant, e.g.
+  `data.state.tf`), and `terraform{}`/`provider{}` blocks share a single
+  `versions.tf`. The `data`/`terraform`/`provider` rules started here and are
+  now upstream in the template, so this is a verbatim copy of
+  `template-repo-terraform-root`'s `scripts/check-tf-standards.sh` -
+  re-copy rather than hand-editing if it changes there.
 - `scripts/tflint.sh` / `scripts/checkov.sh` - run against `terraform/` with
   `terraform.tfvars` applied (`terraform/.tflint.hcl` enables the `azurerm`
   ruleset plugin), replacing `pre-commit-terraform`'s own

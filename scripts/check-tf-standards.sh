@@ -4,17 +4,16 @@
 # keyword — locals.tf, variables.tf, outputs.tf, data.tf, versions.tf (for
 # both `terraform{}` and `provider{}` - versions.tf is the name HashiCorp's
 # own "Standard Module Structure" doc uses for the terraform{}/
-# required_providers block, extended here to provider blocks too since this
-# repo keeps all three together), or a topic-scoped variant of any of them
-# (e.g. outputs.network.tf, data.state.tf). TFLint's
+# required_providers block, extended here to provider blocks too so all three
+# stay together), or a topic-scoped variant of any of them (e.g.
+# outputs.network.tf, data.state.tf). TFLint's
 # terraform_standard_module_structure rule covers variables.tf/outputs.tf but
 # hardcodes those exact filenames (no topic-scoped variants, no
-# locals/data/versions support), so this replaces it entirely. Adapted from
-# jay-withers/template-repo-terraform-root's scripts/check-tf-file-layout.sh
-# (see that repo for the canonical version) with two additions specific to
-# this repo: `data` (this module has real Azure data-source lookups; the
-# template doesn't), and `terraform`/`provider` blocks being required in
-# versions.tf (this repo's own house rule, on top of the template's).
+# locals/data/versions support), so this replaces it entirely.
+#
+# Verbatim copy of jay-withers/template-repo-terraform-root's
+# scripts/check-tf-standards.sh — re-copy rather than hand-editing if it
+# changes upstream.
 set -euo pipefail
 
 violations=0
