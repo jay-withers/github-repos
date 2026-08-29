@@ -128,10 +128,16 @@ preset and activate automatically if a derived repo adds those ecosystems.
 
 ## GitHub repo settings
 
-`terraform/repository.tf` and `terraform/ruleset.tf` (see `## Terraform`
-below) are the sole mechanism for the platform settings that can't live in
-files: repo-level auto-merge (required for `renovate.json`'s
-`platformAutomerge`), delete-branch-on-merge, and a "Protect main" ruleset on
+`terraform/repository.tf`, `terraform/ruleset.tf` and `terraform/actions.tf`
+(see `## Terraform` below) are the sole mechanism for the platform settings
+that can't live in files: repo-level auto-merge (required for
+`renovate.json`'s `platformAutomerge`), delete-branch-on-merge, the
+`AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_SUBSCRIPTION_ID` Actions variables
+that let `ci-terraform` authenticate to Azure by OIDC (set on every repo with
+`remote_state = true` in `var.repos`, as environment-scoped variables where
+that repo also declares `environments` — the PAT secret `TF_GITHUB_TOKEN`
+stays manual, since Terraform would have to store it in plain text in state),
+and a "Protect main" ruleset on
 `main` requiring each repo's status checks (`required_status_checks` in
 `terraform/terraform.tfvars`'s `var.repos`) and 0 approving reviews, with the
 Renovate GitHub App (looked up via `gh api apps/renovate`) and the repo Admin
@@ -163,7 +169,18 @@ and `make init`/`fmt`/`validate`/`plan`/`apply`/`destroy` above. It
 normalizes every repo onto the settings `terraform-root-aks` had configured
 by hand (squash-only merge methods, delete-branch-on-merge, the same
 "Protect main" ruleset shape), overriding only each repo's description,
-topics, and required status checks. State is **remote**, in the "shared"
+topics, and required status checks. A repo with Terraform of its own also sets `remote_state = true` (plus
+`environments = [...]` when it deploys more than one, which scopes the
+container, identity and Actions variables per environment instead of per
+repo) — that one flag is the whole onboarding: `terraform/state.tf` creates
+its state container, `identities.tf` its federated identity, and
+`actions.tf` the `AZURE_*` variables its CI reads. `scripts/bootstrap-state.ps1`
+now only creates the storage account itself plus this repo's own container
+(the one `versions.tf`'s backend block points at, which has to exist before
+`terraform init` runs; `state.tf` adopts it with the module's only `import`
+block).
+
+State is **remote**, in the "shared"
 Terraform state storage account this module also manages access to (backend
 block in `versions.tf`) — durability comes from that account's blob
 versioning and soft-delete, not from any import/recovery mechanism in the

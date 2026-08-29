@@ -29,7 +29,7 @@ terraform {
 # repo below; in CI it's the TF_GITHUB_TOKEN repository secret. See
 # terraform/README.md for how to create and scope it.
 provider "github" {
-  owner = "jay-withers"
+  owner = var.github_owner
 }
 
 # Subscription comes from ARM_SUBSCRIPTION_ID in the environment — azurerm
