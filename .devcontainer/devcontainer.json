@@ -1,6 +1,6 @@
 {
   "name": "terraform",
-  "image": "ghcr.io/jay-withers/dev-containers/terraform:v0.9.2@sha256:c2ecec49987f00a16e190a95f950da504cad688a59c91e199dc9e3fb66d89c1a",
+  "image": "ghcr.io/jay-withers/dev-containers/terraform:v0.9.2@sha256:7ba50fe2774911bfa85a2381f0203d3e493d7673b1274d845a00fbb99b4cec0b",
   "customizations": {
     "vscode": {
       "extensions": [

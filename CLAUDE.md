@@ -51,6 +51,34 @@ checks, and `no-commit-to-branch` which blocks direct commits to `main`),
 `commit-msg` stage). When a repo derived from this template gains a language,
 add its formatter/linter hooks here rather than replacing these.
 
+On top of that language-agnostic baseline, this repo's own `terraform/`
+application adds `antonbabenko/pre-commit-terraform`'s `terraform_fmt`/
+`terraform_validate`/`terraform_docs` (the latter appends a generated
+Requirements/Providers/Modules/Resources/Inputs/Outputs block to the bottom
+of `terraform/README.md`, between `<!-- BEGIN_TF_DOCS -->`/`<!-- END_TF_DOCS
+-->` markers, on every hook run - the hand-written prose above those markers
+is never touched), plus three local, unpinned hooks aligned with
+[jay-withers/template-repo-terraform-root](https://github.com/jay-withers/template-repo-terraform-root/blob/main/.pre-commit-config.yaml)'s
+own (see each script's header comment for exactly what's copied vs. adapted):
+
+- `scripts/check-tf-standards.sh` - this repo's file-layout house rules:
+  `data`/`locals`/`variable`/`output` blocks each live in their own dedicated
+  file (`data.tf`, `locals.tf`, `variables.tf`, `outputs.tf`, or a
+  `<block-type>.<name>.tf` variant, e.g. `data.state.tf`), and
+  `terraform{}`/`provider{}` blocks share a single `versions.tf`. The
+  `data`/`terraform`/`provider` rules are this repo's own addition on top of
+  the template's (which only covers `locals`/`variable`/`output`).
+- `scripts/tflint.sh` / `scripts/checkov.sh` - run against `terraform/` with
+  `terraform.tfvars` applied (`terraform/.tflint.hcl` enables the `azurerm`
+  ruleset plugin), replacing `pre-commit-terraform`'s own
+  `terraform_tflint`/`terraform_checkov` hooks entirely. The template repo
+  loops this per `terraform/environments/*.tfvars` file since it deploys the
+  same module to several environments; this repo has exactly one deployment
+  and one `terraform.tfvars`, so the loop collapses to a single invocation.
+  `checkov.sh` skips `CKV_GIT_1` ("repository should be private") -
+  `repo_defaults.visibility` in `locals.tf` deliberately makes every managed
+  repo public, so that finding is by design, not a gap.
+
 ## CI
 
 Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery):
@@ -76,11 +104,12 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   (`dorny/paths-filter`) gates a `plan` job (`terraform plan` on `terraform/`)
   so it runs only when a PR touches Terraform, behind a `ci-terraform` gate
   job that always runs and is the check required in the ruleset — same shape
-  as `terraform-root-aks`'s `ci-terraform`, except auth is a PAT
-  (`TF_GITHUB_TOKEN` secret) rather than Azure OIDC, since the GitHub
-  provider has no OIDC federation. Plan-only: nothing applies in CI (see
-  Terraform below), so every plan starts from empty state and always shows
-  each resource as "to import" first — expected, not a failure.
+  as `terraform-root-aks`'s `ci-terraform`, except it authenticates twice:
+  Azure OIDC for the `azurerm` provider (gated on the `AZURE_CLIENT_ID`
+  repository variable — see terraform/README.md's Auth section), and a PAT
+  (`TF_GITHUB_TOKEN` secret) for the `github` provider, since that provider
+  has no OIDC federation of its own. Plan-only: nothing applies in CI (see
+  Terraform below).
 
 ## Renovate
 
@@ -132,9 +161,10 @@ and `make init`/`fmt`/`validate`/`plan`/`apply`/`destroy` above. It
 normalizes every repo onto the settings `terraform-root-aks` had configured
 by hand (squash-only merge methods, delete-branch-on-merge, the same
 "Protect main" ruleset shape), overriding only each repo's description,
-topics, and required status checks. State is **local and gitignored, never
-committed** — no remote backend. `imports.tf`'s `import` blocks make that
-safe: losing state just means the next plan/apply re-imports every resource
-from live GitHub data first. The tradeoff is no CI apply — `ci-terraform`
-only plans; run `make apply` locally after merging a Terraform change. See
+topics, and required status checks. State is **remote**, in the "shared"
+Terraform state storage account this module also manages access to (backend
+block in `versions.tf`) — durability comes from that account's blob
+versioning and soft-delete, not from any import/recovery mechanism in the
+module itself. The tradeoff is no CI apply — `ci-terraform` only plans; run
+`make apply` locally after merging a Terraform change. See
 `terraform/README.md` for the full reasoning.

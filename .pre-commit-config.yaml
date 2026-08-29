@@ -55,8 +55,50 @@ repos:
       - id: shellcheck
         args: [--external-sources]
 
+  # Local, not a pinned third-party repo - these are house rules/tooling
+  # specific to this repo (check-tf-standards.sh, tflint.sh, checkov.sh are
+  # all adapted from jay-withers/template-repo-terraform-root's own
+  # .pre-commit-config.yaml - see each script's header for what changed and
+  # why). tflint/checkov replace antonbabenko/pre-commit-terraform's own
+  # terraform_tflint/terraform_checkov hooks entirely, same as that repo,
+  # so linting runs with terraform.tfvars applied - var.repos/var.state_consumers
+  # have no defaults, so an unresolved plan is far less useful to lint.
+  - repo: local
+    hooks:
+      - id: check-tf-standards
+        name: Check Terraform file layout standards
+        description: "Fails if a locals/variable/output/data block isn't in a matching locals*.tf/variables*.tf/outputs*.tf/data*.tf file, or a terraform{}/provider{} block isn't in versions.tf."
+        entry: scripts/check-tf-standards.sh
+        language: script
+        pass_filenames: false
+        files: \.tf$
+
+      - id: tflint
+        name: TFLint
+        description: Runs tflint against terraform/ with terraform.tfvars applied.
+        entry: scripts/tflint.sh
+        language: script
+        pass_filenames: false
+        files: \.(tf|tfvars)$
+        exclude: \.terraform/.*$
+
+      - id: checkov
+        name: Checkov
+        description: Runs checkov against terraform/ with terraform.tfvars applied.
+        entry: scripts/checkov.sh
+        language: script
+        pass_filenames: false
+        files: \.(tf|tfvars)$
+        exclude: \.terraform/.*$
+
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: 581213484f4262600d17c71e272176d4eb6724a5 # frozen: v1.109.0
     hooks:
       - id: terraform_fmt
       - id: terraform_validate
+
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true

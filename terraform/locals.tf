@@ -46,18 +46,22 @@ locals {
   admin_role_id   = 5
   renovate_app_id = 2740
 
-  # Existing "Protect main" ruleset IDs, one per already-protected repo -
-  # gh api repos/jay-withers/<repo>/rulesets --jq '.[].id'. `github-repos` is
-  # deliberately absent: it has no ruleset yet, so its
-  # github_repository_ruleset is created fresh instead of imported.
-  existing_ruleset_ids = {
-    "terraform-root-aks"           = 20476862
-    "azure-landingzone"            = 20476824
-    "template-repo-terraform-root" = 18814850
-    "template-repo-base"           = 18687006
-    "dev-containers"               = 18813027
-    "toolchain"                    = 18812587
-    "workflows"                    = 18587890
-    "renovate"                     = 18686686
-  }
+  # Federated credential names must be unique per identity and cannot contain
+  # the ":" and "/" that appear in a subject, so the map key supplies the name
+  # and the value supplies the subject. Defaults cover a plan-on-PR /
+  # apply-on-merge pipeline - same shape as azure-landingzone's landingzones
+  # and bootstrap components. The key is never parsed back apart anywhere, so
+  # a plain "-" join (not "--") is fine even though both halves can
+  # themselves contain hyphens.
+  state_federated_credentials = merge([
+    for key, c in var.state_consumers : {
+      for name, subject in coalesce(c.federated_subjects, {
+        "pull-request" = "repo:${c.github_repo}:pull_request"
+        "main"         = "repo:${c.github_repo}:ref:refs/heads/main"
+        }) : "${key}-${name}" => {
+        consumer = key
+        subject  = subject
+      }
+    }
+  ]...)
 }

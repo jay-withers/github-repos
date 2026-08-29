@@ -29,12 +29,23 @@ jobs:
               - '.terraform-version'
               - '.github/workflows/ci-terraform.yml'
 
+  # Gated on vars.AZURE_CLIENT_ID in addition to the path filter: this module
+  # now also manages Azure resources (state.tf/identities.tf, for the shared
+  # Terraform state storage account - see terraform/README.md), and its
+  # backend.tf points at that same account. `terraform init` initializes the
+  # whole configuration, backend included, so there is no way to plan just
+  # the GitHub-only resources without Azure credentials once a real backend
+  # is configured - same reasoning, and the same gate, as
+  # terraform-root-aks's ci-terraform.yml. Set AZURE_CLIENT_ID/TENANT_ID/
+  # SUBSCRIPTION_ID once scripts/bootstrap-state.ps1 has been run and this
+  # repo's own identity (state_github_secrets output) exists.
   plan:
     needs: changes
-    if: needs.changes.outputs.terraform == 'true'
+    if: needs.changes.outputs.terraform == 'true' && vars.AZURE_CLIENT_ID != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      id-token: write
     defaults:
       run:
         working-directory: terraform
@@ -43,6 +54,10 @@ jobs:
       # terraform/README.md. Not the built-in GITHUB_TOKEN: that's scoped to
       # this one repo and can't read or plan changes against the others.
       GITHUB_TOKEN: ${{ secrets.TF_GITHUB_TOKEN }}
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -63,10 +78,6 @@ jobs:
       - name: Terraform validate
         run: terraform validate -no-color
 
-      # State is local-only (never committed - see terraform/README.md), so
-      # this always starts from empty state: every resource plans as "to
-      # import" first, then the real diff (if any) on top. That's expected,
-      # not a sign the plan failed to run.
       - name: Terraform plan
         run: terraform plan -input=false -no-color
 
