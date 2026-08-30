@@ -72,28 +72,58 @@ locals {
     }
   ]...)
 
+  # GitHub is part-way through a rollout of "immutable" OIDC subjects, which
+  # carry the numeric owner and repo IDs (repo:owner@288264678/name@1345898182)
+  # rather than plain names - and it lands per repo, not per account: at the
+  # time of writing github-repos and azure-landingzone mint the ID form while
+  # terraform-root-aks still mints the legacy one. `gh api
+  # repos/<owner>/<repo>/actions/oidc/customization/sub` reports which, in
+  # sub_claim_prefix (note that use_immutable_subject can read false while the
+  # prefix is already the ID form - the prefix is what actually gets minted).
+  #
+  # So rather than track that per repo and break a repo the day it migrates,
+  # every credential is declared in BOTH forms below. Only the matching one is
+  # ever presented; the other sits unused and costs nothing (Entra allows 20
+  # per identity). Drop the legacy half once every repo reports an ID prefix.
+  state_subject_prefixes = {
+    for name, _ in local.state_repos : name => {
+      legacy    = "repo:${var.github_owner}/${name}"
+      immutable = "repo:${var.github_owner}@${var.github_owner_id}/${name}@${github_repository.this[name].repo_id}"
+    }
+  }
+
+  # What each target's workflows actually present: the plan-on-PR /
+  # apply-on-merge pair for a single-deployment repo - same shape as
+  # azure-landingzone's landingzones and bootstrap components - or, for an
+  # environment target, the environment alone. A job that declares
+  # `environment: <env>` presents that subject whatever the ref or event, so
+  # the one claim covers its plans and its applies alike, and no other
+  # environment's workflow can present it.
+  state_target_claims = {
+    for key, target in local.state_targets : key => (
+      target.environment == null
+      ? { "pull-request" = "pull_request", "main" = "ref:refs/heads/main" }
+      : { "environment" = "environment:${target.environment}" }
+    )
+  }
+
   # Federated credential names must be unique per identity and cannot contain
   # the ":" and "/" that appear in a subject, so the map key supplies the name
   # and the value supplies the subject. The key is never parsed back apart
-  # anywhere, so a plain "-" join (not "--") is fine even though both halves
-  # can themselves contain hyphens.
-  #
-  # A single-deployment repo gets the plan-on-PR / apply-on-merge pair - same
-  # shape as azure-landingzone's landingzones and bootstrap components. An
-  # environment target gets exactly one credential instead: a job that
-  # declares `environment: <env>` always presents the
-  # `...:environment:<env>` subject whatever the ref or event, so that one
-  # subject covers its plans and its applies alike, and no other environment's
-  # workflow can present it.
-  state_federated_credentials = merge([
-    for key, target in local.state_targets :
-    target.environment == null ? {
-      "${key}-pull-request" = { target = key, subject = "repo:${var.github_owner}/${target.repo}:pull_request" }
-      "${key}-main"         = { target = key, subject = "repo:${var.github_owner}/${target.repo}:ref:refs/heads/main" }
-      } : {
-      "${key}-environment" = { target = key, subject = "repo:${var.github_owner}/${target.repo}:environment:${target.environment}" }
-    }
-  ]...)
+  # anywhere, so a plain "-" join (not "--") is fine even though every half can
+  # itself contain hyphens. The legacy form keeps the bare name so the
+  # credentials that already exist stay put.
+  state_federated_credentials = merge(flatten([
+    for key, claims in local.state_target_claims : [
+      for form, prefix in local.state_subject_prefixes[local.state_targets[key].repo] : {
+        for claim_name, claim in claims :
+        "${key}-${claim_name}${form == "immutable" ? "-immutable" : ""}" => {
+          target  = key
+          subject = "${prefix}:${claim}"
+        }
+      }
+    ]
+  ])...)
 
   # The same three values the state_github_secrets output reports, flattened
   # to one entry per Actions variable so a single for_each in actions.tf

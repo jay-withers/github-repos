@@ -62,6 +62,34 @@ consequences worth knowing before turning it on:
 `terraform-root-aks` and `azure-landingzone` currently declare `dev` only; the
 others are single-deployment or have no Terraform at all.
 
+#### Immutable OIDC subjects
+
+GitHub is part-way through a rollout that changes the `sub` claim Actions
+mints from `repo:<owner>/<repo>:...` to an **immutable** form carrying numeric
+IDs — `repo:jay-withers@288264678/github-repos@1345898182:...`. A federated
+credential created for the old form simply never matches the new one, and the
+failure is an `AADSTS700213: No matching federated identity record found`
+during `terraform init`, quoting the subject it actually presented.
+
+It lands per repository, not per account — as of this writing `github-repos`
+and `azure-landingzone` mint the ID form while `terraform-root-aks` still
+mints the legacy one. Check any repo with:
+
+```bash
+gh api repos/jay-withers/<repo>/actions/oidc/customization/sub --jq .sub_claim_prefix
+```
+
+(`use_immutable_subject` can read `false` while `sub_claim_prefix` is already
+the ID form; the prefix is what actually gets minted.)
+
+So `identities.tf` declares **every credential twice**, once per form — only
+the matching one is ever presented, the other is inert, and a repo migrating
+mid-flight keeps working with no change here. Entra allows 20 credentials per
+identity, so there's plenty of room. Drop the legacy half (the `form` loop in
+`locals.tf`'s `state_federated_credentials`) once every repo reports an ID
+prefix. `var.github_owner_id` holds the numeric owner ID, since the `github`
+provider's user data source exposes the GraphQL node ID rather than this one.
+
 ## State
 
 Remote: the `backend "azurerm"` block lives in `versions.tf` (not a separate
@@ -205,6 +233,7 @@ block to paste into that repo.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_github_owner"></a> [github\_owner](#input\_github\_owner) | GitHub account that owns every repo in var.repos. Used by the provider in versions.tf and to build the OIDC subjects in locals.tf, so the two can never disagree. | `string` | `"jay-withers"` | no |
+| <a name="input_github_owner_id"></a> [github\_owner\_id](#input\_github\_owner\_id) | Numeric account ID of var.github\_owner, from `gh api users/<owner> --jq .id`. Needed for GitHub's immutable OIDC subjects - see locals.tf's state\_subject\_prefixes. Not derived from a data source: the github provider's user data source exposes the GraphQL node ID, not this. | `number` | `288264678` | no |
 | <a name="input_location"></a> [location](#input\_location) | Azure region for the identities this repo creates. See identities.tf. | `string` | `"westeurope"` | no |
 | <a name="input_repos"></a> [repos](#input\_repos) | GitHub repositories to manage, keyed by repo name.<br/><br/>`remote_state` opts a repo into the shared Terraform state storage<br/>account: it gets its own container, a container-scoped federated identity<br/>(identities.tf/state.tf) and the AZURE\_* Actions variables its own CI<br/>needs to use that identity (actions.tf). Leave it false for repos with no<br/>Terraform of their own - an unused identity and container is clutter, not<br/>a safe default.<br/><br/>`environments` scopes all of that per environment instead of per repo, for<br/>a repo that deploys the same module several times (dev/stg/prd). Each<br/>environment gets its own container (`<repo>-<env>`), its own identity, a<br/>GitHub environment, and the AZURE\_* values as *environment* variables<br/>rather than repository ones - so one environment's credentials can never<br/>plan or apply another's, and prd can later grow approval gates without<br/>touching dev. The cost is that every job in that repo's workflows must<br/>declare `environment: <env>`, because the identity is federated on the<br/>`...:environment:<env>` OIDC subject and nothing else. Leave it empty for<br/>a repo with a single deployment (this one) - it then gets one identity,<br/>one container and plain repository variables, federated on pull\_request<br/>and main. | <pre>map(object({<br/>    description  = optional(string, "")<br/>    topics       = optional(list(string), [])<br/>    remote_state = optional(bool, false)<br/>    environments = optional(set(string), [])<br/>    required_status_checks = optional(list(object({<br/>      context        = string<br/>      integration_id = optional(number)<br/>    })), [])<br/>  }))</pre> | n/a | yes |
 | <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name) | The shared state resource group. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $ResourceGroupName. Changing this means changing the script and re-running it first. | `string` | `"rg-tfstate-shared"` | no |

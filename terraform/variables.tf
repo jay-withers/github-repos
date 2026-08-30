@@ -60,6 +60,12 @@ variable "github_owner" {
   default     = "jay-withers"
 }
 
+variable "github_owner_id" {
+  description = "Numeric account ID of var.github_owner, from `gh api users/<owner> --jq .id`. Needed for GitHub's immutable OIDC subjects - see locals.tf's state_subject_prefixes. Not derived from a data source: the github provider's user data source exposes the GraphQL node ID, not this."
+  type        = number
+  default     = 288264678
+}
+
 variable "location" {
   description = "Azure region for the identities this repo creates. See identities.tf."
   type        = string
