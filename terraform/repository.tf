@@ -18,6 +18,17 @@ resource "github_repository" "this" {
   # prefix, so that naming convention is the single source of truth.
   is_template = startswith(each.key, "template-repo-")
 
+  # Only present for a repo generated from another - see each.value's
+  # generated_from_template description in variables.tf. Owner is always
+  # this same account, matching the "github" provider block in versions.tf.
+  dynamic "template" {
+    for_each = each.value.generated_from_template != null ? [each.value.generated_from_template] : []
+    content {
+      owner      = "jay-withers"
+      repository = template.value
+    }
+  }
+
   allow_squash_merge = local.repo_defaults.allow_squash_merge
   allow_merge_commit = local.repo_defaults.allow_merge_commit
   allow_rebase_merge = local.repo_defaults.allow_rebase_merge

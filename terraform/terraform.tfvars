@@ -71,6 +71,7 @@ repos = {
   "git-demo" = {}
 
   "market-agent" = {
+    generated_from_template = "template-repo-terraform-root"
     # No CI yet - populate once the repo has a pre-commit / Pre-commit (and
     # any other) workflow to require, matching the git-demo pattern above.
     required_status_checks = []
