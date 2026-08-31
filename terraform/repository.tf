@@ -10,7 +10,7 @@ resource "github_repository" "this" {
   has_wiki        = local.repo_defaults.has_wiki
   has_discussions = local.repo_defaults.has_discussions
 
-  visibility = coalesce(each.value.visibility, local.repo_defaults.visibility)
+  visibility = local.repo_defaults.visibility
 
   allow_squash_merge = local.repo_defaults.allow_squash_merge
   allow_merge_commit = local.repo_defaults.allow_merge_commit

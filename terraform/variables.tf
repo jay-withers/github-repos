@@ -3,10 +3,6 @@ variable "repos" {
   type = map(object({
     description = optional(string, "")
     topics      = optional(list(string), [])
-    # Overrides local.repo_defaults.visibility ("public") for repos that need
-    # to be private. Left null for every repo that should stay on the
-    # default - see CLAUDE.md.
-    visibility = optional(string)
     required_status_checks = optional(list(object({
       context        = string
       integration_id = optional(number)
