@@ -12,6 +12,12 @@ resource "github_repository" "this" {
 
   visibility = local.repo_defaults.visibility
 
+  # Derived from the name rather than a per-repo variable field: every repo
+  # meant to be cloned/generated from (template-repo-base,
+  # template-repo-terraform-root) already carries the "template-repo-"
+  # prefix, so that naming convention is the single source of truth.
+  is_template = startswith(each.key, "template-repo-")
+
   allow_squash_merge = local.repo_defaults.allow_squash_merge
   allow_merge_commit = local.repo_defaults.allow_merge_commit
   allow_rebase_merge = local.repo_defaults.allow_rebase_merge
