@@ -163,7 +163,8 @@ and `make init`/`fmt`/`validate`/`plan`/`apply`/`destroy` above. It
 normalizes every repo onto the settings `terraform-root-aks` had configured
 by hand (squash-only merge methods, delete-branch-on-merge, the same
 "Protect main" ruleset shape), overriding only each repo's description,
-topics, and required status checks. State is **remote**, in the "shared"
+topics, required status checks, and (rarely - most repos stay on the public
+default) visibility. State is **remote**, in the "shared"
 Terraform state storage account this module also manages access to (backend
 block in `versions.tf`) — durability comes from that account's blob
 versioning and soft-delete, not from any import/recovery mechanism in the

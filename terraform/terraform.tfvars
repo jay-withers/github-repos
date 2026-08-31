@@ -69,6 +69,13 @@ repos = {
   }
 
   "git-demo" = {}
+
+  "market-agent" = {
+    visibility = "private"
+    # No CI yet - populate once the repo has a pre-commit / Pre-commit (and
+    # any other) workflow to require, matching the git-demo pattern above.
+    required_status_checks = []
+  }
 }
 
 # The "shared" Terraform state storage account this repo creates access to —

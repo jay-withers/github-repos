@@ -15,8 +15,10 @@
 # benefit. Expect a "Failed to download module" warning; it's harmless.
 #
 # --skip-check CKV_GIT_1 ("repository should be private"): every repo this
-# module manages is deliberately public (repo_defaults.visibility in
-# locals.tf) - that's the point of the account, not a gap to fix.
+# module manages defaults to public (repo_defaults.visibility in locals.tf)
+# - that's the point of the account, not a gap to fix. The rare per-repo
+# override to private (var.repos[*].visibility) just makes this check moot
+# for that repo rather than something to re-enable.
 set -euo pipefail
 
 repo_root=$(git rev-parse --show-toplevel)
