@@ -1,19 +1,29 @@
 # The set of repositories this module manages. To add a new repo: add an
-# entry here and open a PR. `required_status_checks` must match the exact
+# entry here and open a PR. Set `remote_state = true` on any repo whose own
+# Terraform should keep its state in the shared storage account - that one
+# flag gets it a container, a federated identity and the AZURE_* Actions
+# variables its CI needs (see variables.tf). `required_status_checks` must
+# match the exact
 # status-check context each repo's CI reports - see CLAUDE.md's note on this
 # (a reusable-workflow call reports as `<caller job id> / <reusable job
 # name>`, not the bare job id), and confirm with `gh pr checks` against that
 # repo.
 repos = {
   "github-repos" = {
-    description = "Terraform that creates and manages every jay-withers GitHub repository, including this one"
+    description  = "Terraform that creates and manages every jay-withers GitHub repository, including this one"
+    remote_state = true
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "ci-terraform" },
     ]
   }
 
+  # dev only for now - stg/prd get added here (and get their own container,
+  # identity and GitHub environment on the next apply) when they actually
+  # exist.
   "terraform-root-aks" = {
+    remote_state = true
+    environments = ["dev"]
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "ci-terraform" },
@@ -21,7 +31,9 @@ repos = {
   }
 
   "azure-landingzone" = {
-    description = "Terraform for a single-subscription Azure landing zone, built as a home lab on a Visual Studio subscription's $150/month credit"
+    description  = "Terraform for a single-subscription Azure landing zone, built as a home lab on a Visual Studio subscription's $150/month credit"
+    remote_state = true
+    environments = ["dev"]
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "ci-terraform" },
@@ -74,15 +86,5 @@ repos = {
     # No CI yet - populate once the repo has a pre-commit / Pre-commit (and
     # any other) workflow to require, matching the git-demo pattern above.
     required_status_checks = []
-  }
-}
-
-# The "shared" Terraform state storage account this repo creates access to —
-# see state.tf/identities.tf, and scripts/bootstrap-state.ps1 for how the
-# account itself is created. To add a consumer: add its container name to
-# scripts/containers.json and re-run that script, then add an entry here.
-state_consumers = {
-  "github-repos" = {
-    github_repo = "jay-withers/github-repos"
   }
 }

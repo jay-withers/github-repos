@@ -3,8 +3,8 @@
 .SYNOPSIS
     Idempotently creates (or corrects) this repo's Terraform remote-state
     storage account: resource group, storage account, blob versioning/soft-
-    delete, one container per consumer (github-repos/scripts/containers.json),
-    and the operator's own data-plane RBAC grant.
+    delete, this repo's own state container, and the operator's own data-plane
+    RBAC grant.
 
 .DESCRIPTION
     This is deliberately NOT Terraform. With shared storage-account keys
@@ -15,7 +15,14 @@
     there's nothing to hold a role on. A stateless, idempotent script sidesteps
     that entirely: it has no backend of its own to bootstrap, and every step
     below checks what already exists before creating anything, so it's safe
-    to re-run whenever a consumer is added.
+    to re-run at any time.
+
+    It creates exactly ONE container — the one this repo's own backend block
+    (terraform/versions.tf) points at, which has to exist before `terraform
+    init` can run at all. Every other state repo's container is Terraform's
+    (terraform/state.tf, driven by var.repos' remote_state), so onboarding a
+    repo needs no run of this script; that container is created here only
+    because nothing else can create it first.
 
     PowerShell is only the scripting shell here — every Azure call shells out
     to the `az` CLI (already on PATH in the dev container image; no Az
@@ -27,30 +34,26 @@
     failures entirely or (via $PSNativeCommandUseErrorActionPreference)
     surface only a generic "non-zero exit code" with the real reason lost.
 
-    Containers are created via `az storage container-rm` (the ARM/control-
+    That container is created via `az storage container-rm` (the ARM/control-
     plane command group), not the data-plane `az storage container` commands
     — Contributor covers control plane, so no RBAC grant is needed just to
     create a container. This is the same mechanism Terraform's own AVM
-    storage-account module uses internally for the same reason.
+    storage-account module uses internally, and the same one
+    terraform/state.tf's azurerm_storage_container uses via
+    `storage_account_id`, for the same reason.
 
     Once this script has run, Terraform only needs to *look up* the account
     (a data source), never create it — see terraform/variables.tf's
     resource_group_name/storage_account_name/location defaults and
     terraform/state.tf/identities.tf for the consuming side.
 
-    Resource group, storage account name, and location are hardcoded below
-    rather than taken as parameters: this script bootstraps one specific
-    account — the "shared" account this repo's terraform/backend.tf points at
-    and terraform/variables.tf's defaults must match. A different account
-    (e.g. azure-landingzone's "platform" account) is a separate copy of this
-    script with those three values changed, and its own containers.json —
-    see that repo.
-
-.PARAMETER ConfigPath
-    Path to the JSON file listing one container name per state consumer
-    (repo). Defaults to containers.json alongside this script. To add a
-    consumer later, add its container name to that file and re-run this
-    script; existing containers are left untouched.
+    Resource group, storage account name, container and location are hardcoded
+    below rather than taken as parameters: this script bootstraps one specific
+    account — the "shared" account this repo's backend block in
+    terraform/versions.tf points at and terraform/variables.tf's defaults must
+    match. A different account (e.g. azure-landingzone's "platform" account)
+    is a separate copy of this script with those values changed — see that
+    repo.
 
 .PARAMETER OperatorPrincipalId
     Identity (object ID, UPN, or service principal app ID — anything `az
@@ -62,17 +65,15 @@
     as.
 
 .EXAMPLE
-    # Uses the hardcoded account identity and containers.json alongside this script.
+    # Uses the hardcoded account identity; safe to re-run.
     ./scripts/bootstrap-state.ps1
 
 .EXAMPLE
-    # Onboarding a new consumer: add its name to containers.json first, then re-run.
-    ./scripts/bootstrap-state.ps1 -ConfigPath ./scripts/containers.json
+    # Granting a second operator (e.g. a break-glass account) state access.
+    ./scripts/bootstrap-state.ps1 -OperatorPrincipalId someone@example.com
 #>
 [CmdletBinding()]
 param(
-    [string]$ConfigPath = (Join-Path $PSScriptRoot "containers.json"),
-
     [string]$OperatorPrincipalId = (az account show --query user.name -o tsv)
 )
 
@@ -120,24 +121,16 @@ function Invoke-Az {
 # since, unlike those other resource groups, this one deliberately isn't.
 $Tags = @("environment=dev", "owner=jay", "component=state", "managed-by=bootstrap-state.ps1")
 
-# This script bootstraps exactly one account - the "shared" state account
-# terraform/backend.tf and terraform/variables.tf's defaults point at. A
-# different account is a different copy of this script with these three
-# changed - see the header comment.
+# This script bootstraps exactly one account - the "shared" state account the
+# backend block in terraform/versions.tf and terraform/variables.tf's defaults
+# point at. A different account is a different copy of this script with these
+# changed - see the header comment. $BootstrapContainer must match that
+# backend block's container_name: it is this repo's own state container, the
+# only one this script creates.
 $ResourceGroupName = "rg-tfstate-shared"
 $StorageAccountName = "sttfsharedjw"
+$BootstrapContainer = "github-repos"
 $Location = "westeurope"
-
-# 0. Consumers, from config rather than a CLI list - this account gains a new
-# consumer/container far more often than its identity or location changes.
-if (-not (Test-Path $ConfigPath)) {
-    throw "Config file not found: $ConfigPath"
-}
-$Containers = @(Get-Content $ConfigPath -Raw | ConvertFrom-Json)
-if ($Containers.Count -eq 0) {
-    throw "No containers listed in $ConfigPath"
-}
-Write-Host "Loaded $($Containers.Count) container(s) from $ConfigPath`: $($Containers -join ', ')"
 
 # 1. Resource group.
 $rgExists = Invoke-Az group exists --name $ResourceGroupName -o tsv
@@ -181,19 +174,20 @@ Invoke-Az storage account blob-service-properties update --resource-group $Resou
     --enable-versioning true --enable-delete-retention true --delete-retention-days 30 `
     --enable-restore-policy false --output none | Out-Null
 
-# 4. Containers, one per consumer — via the ARM-based `container-rm` command
-# group, control plane only, so ordinary Contributor is enough to create them.
-foreach ($container in $Containers) {
-    $existing = Invoke-Az storage container-rm exists --storage-account $StorageAccountName --resource-group $ResourceGroupName `
-        --name $container --query exists -o tsv
-    if ($existing -ne "true") {
-        Write-Host "Creating container $container..."
-        Invoke-Az storage container-rm create --storage-account $StorageAccountName --resource-group $ResourceGroupName `
-            --name $container --public-access off --output none | Out-Null
-    }
-    else {
-        Write-Host "Container $container already exists."
-    }
+# 4. This repo's own state container — via the ARM-based `container-rm`
+# command group, control plane only, so ordinary Contributor is enough to
+# create it. Only this one: every other state repo's container is Terraform's
+# (terraform/state.tf). This one can't be, because terraform/versions.tf's
+# backend block already points at it before Terraform has run once.
+$containerExists = Invoke-Az storage container-rm exists --storage-account $StorageAccountName --resource-group $ResourceGroupName `
+    --name $BootstrapContainer --query exists -o tsv
+if ($containerExists -ne "true") {
+    Write-Host "Creating container $BootstrapContainer..."
+    Invoke-Az storage container-rm create --storage-account $StorageAccountName --resource-group $ResourceGroupName `
+        --name $BootstrapContainer --public-access off --output none | Out-Null
+}
+else {
+    Write-Host "Container $BootstrapContainer already exists."
 }
 
 # 5. Operator RBAC. Without this, `terraform init`/`apply` against this
@@ -211,4 +205,4 @@ else {
     Write-Host "$OperatorPrincipalId already has Storage Blob Data Contributor on $StorageAccountName."
 }
 
-Write-Host "Done. $StorageAccountName is ready with containers: $($Containers -join ', ')"
+Write-Host "Done. $StorageAccountName is ready, with container $BootstrapContainer."
