@@ -12,15 +12,11 @@ resource "github_repository" "this" {
 
   visibility = local.repo_defaults.visibility
 
-  # Derived from the name rather than a per-repo variable field: every repo
-  # meant to be cloned/generated from (template-repo-base,
-  # template-repo-terraform-root) already carries the "template-repo-"
-  # prefix, so that naming convention is the single source of truth.
+  # True for repos meant to be cloned from, e.g. template-repo-base.
   is_template = startswith(each.key, "template-repo-")
 
-  # Only present for a repo generated from another - see each.value's
-  # generated_from_template description in variables.tf. Owner is always
-  # this same account, matching the "github" provider block in versions.tf.
+  # Set only for a repo generated from another - see generated_from_template
+  # in variables.tf.
   dynamic "template" {
     for_each = each.value.generated_from_template != null ? [each.value.generated_from_template] : []
     content {

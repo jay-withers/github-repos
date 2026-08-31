@@ -3,11 +3,9 @@ variable "repos" {
   type = map(object({
     description = optional(string, "")
     topics      = optional(list(string), [])
-    # Name of another repo in this same map to generate this one from via
-    # GitHub's template mechanism (e.g. "template-repo-terraform-root").
-    # Create-time only - has no effect on a repo that already exists, since
-    # `template` sits in this resource's lifecycle.ignore_changes (see
-    # repository.tf). Left null for every repo not generated from a template.
+    # Repo to generate this one from via GitHub's template mechanism.
+    # Create-time only - see the template lifecycle.ignore_changes note in
+    # repository.tf.
     generated_from_template = optional(string)
     required_status_checks = optional(list(object({
       context        = string
