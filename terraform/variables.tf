@@ -3,6 +3,10 @@ variable "repos" {
   type = map(object({
     description = optional(string, "")
     topics      = optional(list(string), [])
+    # Repo to generate this one from via GitHub's template mechanism.
+    # Create-time only - see the template lifecycle.ignore_changes note in
+    # repository.tf.
+    generated_from_template = optional(string)
     required_status_checks = optional(list(object({
       context        = string
       integration_id = optional(number)

@@ -12,6 +12,19 @@ resource "github_repository" "this" {
 
   visibility = local.repo_defaults.visibility
 
+  # True for repos meant to be cloned from, e.g. template-repo-base.
+  is_template = startswith(each.key, "template-repo-")
+
+  # Set only for a repo generated from another - see generated_from_template
+  # in variables.tf.
+  dynamic "template" {
+    for_each = each.value.generated_from_template != null ? [each.value.generated_from_template] : []
+    content {
+      owner      = "jay-withers"
+      repository = template.value
+    }
+  }
+
   allow_squash_merge = local.repo_defaults.allow_squash_merge
   allow_merge_commit = local.repo_defaults.allow_merge_commit
   allow_rebase_merge = local.repo_defaults.allow_rebase_merge
