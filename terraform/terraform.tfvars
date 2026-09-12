@@ -9,14 +9,14 @@ repos = {
     description = "Terraform that creates and manages every jay-withers GitHub repository, including this one"
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
-      { context = "ci-terraform" },
+      { context = "terraform / Terraform" },
     ]
   }
 
   "terraform-root-aks" = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
-      { context = "ci-terraform" },
+      { context = "terraform / Terraform" },
     ]
   }
 
@@ -24,14 +24,14 @@ repos = {
     description = "Terraform for a single-subscription Azure landing zone, built as a home lab on a Visual Studio subscription's $150/month credit"
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
-      { context = "ci-terraform" },
+      { context = "terraform / Terraform" },
     ]
   }
 
   "template-repo-terraform-root" = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
-      { context = "ci-terraform" },
+      { context = "terraform / Terraform" },
     ]
   }
 
