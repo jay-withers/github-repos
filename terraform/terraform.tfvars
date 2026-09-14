@@ -72,9 +72,20 @@ repos = {
 
   "market-agent" = {
     generated_from_template = "template-repo-terraform-root"
-    # No CI yet - populate once the repo has a pre-commit / Pre-commit (and
-    # any other) workflow to require, matching the git-demo pattern above.
-    required_status_checks = []
+    # `test / Test` is the Python suite, via the shared python.yml - namespaced
+    # by the calling job like pre-commit is. `ci-terraform` is that workflow's
+    # gate job, which always reports because its path filtering is at the job
+    # level rather than on the trigger.
+    #
+    # ci-container-build's two `build (...)` contexts are deliberately absent.
+    # That workflow *is* filtered on its trigger (paths: apps/**), so on a
+    # Terraform-only PR it never runs and never reports - and a required check
+    # that never reports leaves the PR pending for ever rather than failing it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "ci-terraform" },
+    ]
   }
 }
 
