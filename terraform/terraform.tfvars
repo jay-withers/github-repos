@@ -72,10 +72,24 @@ repos = {
 
   "market-agent" = {
     generated_from_template = "template-repo-terraform-root"
-    # `test / Test` is the Python suite, via the shared python.yml - namespaced
-    # by the calling job like pre-commit is. `ci-terraform` is that workflow's
-    # gate job, which always reports because its path filtering is at the job
-    # level rather than on the trigger.
+    # Every workflow in that repo is a thin caller of a reusable workflow in
+    # jay-withers/workflows, so all but one of these contexts is namespaced
+    # `<caller job id> / <reusable job name>` rather than the bare job id -
+    # `test / Test` is the Python suite via python.yml, `terraform / Terraform`
+    # the credential-free validate via terraform.yml.
+    #
+    # Terraform takes two contexts, not one. `terraform / Terraform` is the
+    # shared workflow's own gate and can only see the jobs inside it, and
+    # market-agent keeps its `plan` job locally - that repo is a single
+    # self-contained root module that plans cleanly, unlike the landing-zone
+    # repos terraform.yml was written for, where a plan against a
+    # not-yet-applied dependency fails for something that is not a defect.
+    # `terraform-plan` is the always-reporting gate over those plan legs.
+    # Dropping either context silently stops guarding half of the Terraform CI.
+    #
+    # Replaced `ci-terraform`, which no longer exists as a context. A required
+    # check that never reports leaves every PR pending rather than failing it,
+    # so this needs applying for merges over there to work at all.
     #
     # ci-container-build's two `build (...)` contexts are deliberately absent.
     # That workflow *is* filtered on its trigger (paths: apps/**), so on a
@@ -84,7 +98,8 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
-      { context = "ci-terraform" },
+      { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
     ]
   }
 }
