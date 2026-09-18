@@ -137,4 +137,12 @@ state_consumers = {
   "github-repos" = {
     github_repo = "jay-withers/github-repos"
   }
+
+  "azure-container-apps" = {
+    github_repo = "jay-withers/azure-container-apps"
+  }
+
+  "repo-agent" = {
+    github_repo = "jay-withers/repo-agent"
+  }
 }
