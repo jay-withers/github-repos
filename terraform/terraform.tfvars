@@ -73,26 +73,33 @@ repos = {
   "azure-container-apps" = {
     description = "Shared Azure Container Apps environment every project deploys onto, plus the Log Analytics workspace and alerting behind it"
     topics      = ["azure", "terraform", "container-apps"]
-    # Empty on purpose for the first apply. This repo has no CI history yet, so
-    # there is no `gh pr checks` output to copy a context from - and applying a
-    # context nothing reports leaves every PR pending for ever rather than
-    # failing it, which is exactly what once blocked this repo's own PRs.
-    # Fill in after the first PR there reports:
-    #   pre-commit / Pre-commit, terraform / Terraform, terraform-plan
-    required_status_checks = []
+    # Read literally off `gh pr checks` on azure-container-apps#2, not inferred
+    # from the workflow files. `terraform-plan` is the always-reporting gate
+    # over the local plan legs; it is `if: always()` and treats a skipped plan
+    # as success, so a PR touching no Terraform still reports it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
+    ]
   }
 
   "repo-agent" = {
     description = "Scheduled agent that scans every jay-withers repository for improvements and checks Renovate is working, then emails a digest"
     topics      = ["azure", "python", "github-app", "renovate"]
-    # Empty for the first apply, same reasoning as above. Expected contexts once
-    # its CI has run:
-    #   pre-commit / Pre-commit, test / Test, terraform / Terraform, terraform-plan
+    # Read literally off `gh pr checks` on repo-agent#2, not inferred from the
+    # workflow files.
     #
-    # ci-container-build's `build (repoagent)` is deliberately not on that list:
-    # that workflow is filtered on its trigger (paths: src/**, Dockerfile, ...),
-    # so a docs-only PR never runs it and never reports.
-    required_status_checks = []
+    # ci-container-build's `build (repoagent)` is deliberately absent: that
+    # workflow is filtered on its trigger (paths: src/**, Dockerfile, ...), so a
+    # docs-only PR never runs it and never reports, and a required check that
+    # never reports leaves the PR pending for ever rather than failing it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
+    ]
   }
 
   "market-agent" = {
