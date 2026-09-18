@@ -1,12 +1,29 @@
-# The set of repositories this module manages. To add a new repo: add an
-# entry here and open a PR. `required_status_checks` must match the exact
-# status-check context each repo's CI reports - see CLAUDE.md's note on this
-# (a reusable-workflow call reports as `<caller job id> / <reusable job
-# name>`, not the bare job id), and confirm with `gh pr checks` against that
-# repo.
+# The set of repositories this module manages, and the catalogue of what each
+# one is for. To add a new repo: add an entry here and open a PR - this file is
+# the only list of every repository, and Terraform applies `description` and
+# `topics` to GitHub, so the catalogue cannot drift from what actually exists.
+#
+# `required_status_checks` must match the exact status-check context each repo's
+# CI reports - see CLAUDE.md's note on this (a reusable-workflow call reports as
+# `<caller job id> / <reusable job name>`, not the bare job id), and confirm with
+# `gh pr checks` against that repo.
+#
+# The grouping below is for readers only; a map has no order as far as Terraform
+# is concerned.
 repos = {
-  "github-repos" = {
-    description = "Terraform that creates and manages every jay-withers GitHub repository, including this one"
+  # ---------------------------------------------------------------------------
+  # Azure estate. The landing zone and the shared infrastructure deployed into
+  # it. Apply order runs downwards: nothing below stands alone.
+  # ---------------------------------------------------------------------------
+
+  "azure-landingzone" = {
+    description = "Terraform for a single-subscription Azure landing zone, built as a home lab on a Visual Studio subscription's $150/month credit"
+    topics      = ["azure", "terraform", "landing-zone"]
+    # The root of the estate. Its `connectivity` component owns the hub VNet and
+    # the private DNS zones, and its `landingzones` component vends resource
+    # groups and identities to the spokes. Both must be applied before any spoke
+    # can deploy. Also the home of the `allowed-locations-dev` policy assignment
+    # that confines everything else to westeurope/northeurope.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
@@ -14,69 +31,37 @@ repos = {
   }
 
   "terraform-root-aks" = {
+    description = "Private AKS cluster with Flux GitOps, VNet, Key Vault, Loki log storage and a jump box, deployed as an application landing zone spoke"
+    topics      = ["azure", "terraform", "aks", "kubernetes", "flux"]
+    # A spoke of azure-landingzone rather than a standalone root module: the
+    # resource group and identity are vended to it, so there is no `location`
+    # variable and the cluster's identity cannot create resource groups. It
+    # creates both halves of the hub peering, since one side alone stays
+    # Initiated.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
     ]
   }
-
-  "azure-landingzone" = {
-    description = "Terraform for a single-subscription Azure landing zone, built as a home lab on a Visual Studio subscription's $150/month credit"
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-      { context = "terraform / Terraform" },
-    ]
-  }
-
-  "template-repo-terraform-root" = {
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-      { context = "terraform / Terraform" },
-    ]
-  }
-
-  "template-repo-base" = {
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-    ]
-  }
-
-  "dev-containers" = {
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-    ]
-  }
-
-  "toolchain" = {
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-    ]
-  }
-
-  "workflows" = {
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-    ]
-  }
-
-  "renovate" = {
-    # "validate" is reported by an app integration rather than a plain
-    # Actions job - see gh api repos/jay-withers/renovate/rulesets.
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-      { context = "validate", integration_id = 15368 },
-    ]
-  }
-
-  "git-demo" = {}
 
   "azure-container-apps" = {
     description = "Shared Azure Container Apps environment every project deploys onto, plus the Log Analytics workspace and alerting behind it"
     topics      = ["azure", "terraform", "container-apps"]
+    # One environment for every project, rather than one per project. It holds
+    # only what is genuinely shared - the Container Apps environment, the Log
+    # Analytics workspace, Application Insights and the job-failure alert - and
+    # no Key Vault, identity or workload. Those belong to whichever project needs
+    # them. Consumers resolve it by name with a data source rather than
+    # `terraform_remote_state`, so no repo needs access to another's state.
+    #
+    # The environment carries no `workload_profile` block, which is what keeps it
+    # free at idle; the Log Analytics daily quota is now shared, so exhausting it
+    # stops ingestion for every project at once.
+    #
     # Read literally off `gh pr checks` on azure-container-apps#2, not inferred
-    # from the workflow files. `terraform-plan` is the always-reporting gate
-    # over the local plan legs; it is `if: always()` and treats a skipped plan
-    # as success, so a PR touching no Terraform still reports it.
+    # from the workflow files. `terraform-plan` is the always-reporting gate over
+    # the local plan legs; it is `if: always()` and treats a skipped plan as
+    # success, so a PR touching no Terraform still reports it.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
@@ -84,26 +69,25 @@ repos = {
     ]
   }
 
-  "repo-agent" = {
-    description = "Scheduled agent that scans every jay-withers repository for improvements and checks Renovate is working, then emails a digest"
-    topics      = ["azure", "python", "github-app", "renovate"]
-    # Read literally off `gh pr checks` on repo-agent#2, not inferred from the
-    # workflow files.
-    #
-    # ci-container-build's `build (repoagent)` is deliberately absent: that
-    # workflow is filtered on its trigger (paths: src/**, Dockerfile, ...), so a
-    # docs-only PR never runs it and never reports, and a required check that
-    # never reports leaves the PR pending for ever rather than failing it.
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-      { context = "test / Test" },
-      { context = "terraform / Terraform" },
-      { context = "terraform-plan" },
-    ]
-  }
+  # ---------------------------------------------------------------------------
+  # Workloads. Applications with their own Terraform, image and CD.
+  # ---------------------------------------------------------------------------
 
   "market-agent" = {
+    description             = "AI paper-trading experiment: an LLM recommends BUY/SELL/HOLD, a deterministic risk engine decides what is permitted, and simulated trades run against a paper broker. No real money"
+    topics                  = ["azure", "terraform", "python", "llm", "fintech"]
     generated_from_template = "template-repo-terraform-root"
+    # Infrastructure, the Python package behind it and a React dashboard, all in
+    # one repo. Still runs its own Container Apps environment, Log Analytics and
+    # Application Insights rather than the shared ones in azure-container-apps -
+    # migrating it is deliberately deferred until the shared environment has
+    # proven itself, because a new environment means its workloads get recreated
+    # and the dashboard's custom domain re-bound.
+    #
+    # Its PostgreSQL Flexible Server is the only thing in the estate that bills
+    # meaningfully while idle, at roughly GBP 13/month, and that SKU was forced
+    # rather than chosen - see that repo's CLAUDE.md on the region trap.
+    #
     # Every workflow in that repo is a thin caller of a reusable workflow in
     # jay-withers/workflows, so all but one of these contexts is namespaced
     # `<caller job id> / <reusable job name>` rather than the bare job id -
@@ -119,10 +103,6 @@ repos = {
     # `terraform-plan` is the always-reporting gate over those plan legs.
     # Dropping either context silently stops guarding half of the Terraform CI.
     #
-    # Replaced `ci-terraform`, which no longer exists as a context. A required
-    # check that never reports leaves every PR pending rather than failing it,
-    # so this needs applying for merges over there to work at all.
-    #
     # ci-container-build's two `build (...)` contexts are deliberately absent.
     # That workflow *is* filtered on its trigger (paths: apps/**), so on a
     # Terraform-only PR it never runs and never reports - and a required check
@@ -133,6 +113,151 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
     ]
+  }
+
+  "repo-agent" = {
+    description = "Scheduled agent that scans every jay-withers repository for improvements and checks Renovate is working, then emails a digest"
+    topics      = ["azure", "python", "github-app", "renovate"]
+    # The first tenant of azure-container-apps, and the proof that the
+    # shared-environment split works: it owns its own resource group, Key Vault,
+    # identity and job, and reaches the environment by name.
+    #
+    # Reads GitHub as a read-only GitHub App and holds no state, so a repeat
+    # finding is re-derived from GitHub timestamps each week rather than
+    # remembered. Its checks are what keep the entries in this file honest - a
+    # missing description or topic list shows up in the weekly digest.
+    #
+    # Read literally off `gh pr checks` on repo-agent#2, not inferred from the
+    # workflow files.
+    #
+    # ci-container-build's `build (repoagent)` is deliberately absent: that
+    # workflow is filtered on its trigger (paths: src/**, Dockerfile, ...), so a
+    # docs-only PR never runs it and never reports, and a required check that
+    # never reports leaves the PR pending for ever rather than failing it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
+    ]
+  }
+
+  # ---------------------------------------------------------------------------
+  # Shared tooling. Consumed by nearly every repo above, so a change here is a
+  # change everywhere - which is the point of them existing.
+  # ---------------------------------------------------------------------------
+
+  "github-repos" = {
+    description = "Terraform that creates and manages every jay-withers GitHub repository, including this one"
+    topics      = ["github", "terraform"]
+    # This repo, and the catalogue you are reading. It is the single source of
+    # truth for which repositories exist, their descriptions, topics and branch
+    # protection, plus the shared Terraform state storage account and the OIDC
+    # identities that let each repo plan against it.
+    #
+    # It plans in CI but never applies: a change takes effect when someone runs
+    # `make apply` against remote state. Because that reads local tfvars, it can
+    # be run from a branch - which is how a required check that nothing reports
+    # gets unstuck without an admin bypass.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+  }
+
+  "workflows" = {
+    description = "Reusable GitHub Actions workflows - terraform, pre-commit, python, docker and release - called by every other repository via workflow_call"
+    topics      = ["github-actions", "ci-cd", "reusable-workflows"]
+    # Every ci-/cd- workflow in every repo above is a thin caller of something
+    # here, pinned by commit SHA with the tag as a comment. A change to how a job
+    # *works* belongs here so every consuming repo picks it up; only what is
+    # specific to a repo stays in that repo.
+    #
+    # This is also why the contexts throughout this file are namespaced: a
+    # reusable-workflow call reports as `<caller job id> / <reusable job name>`.
+    #
+    # Its README still calls the repo `template-pipelines`, from before the
+    # rename.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+  }
+
+  "renovate" = {
+    description = "Centralised Renovate configuration presets that every repository extends, so dependency-update policy is changed in one place"
+    topics      = ["renovate", "dependencies", "automation"]
+    # Renamed from `template-renovate`. Consumers must extend
+    # `github>jay-withers/renovate`: the old name resolves only through GitHub's
+    # rename redirect, which disappears the moment anything is created at the old
+    # path, and would break preset resolution in every repo at once with nothing
+    # to announce it. Its own README still documents the old name.
+    #
+    # "validate" is reported by an app integration rather than a plain
+    # Actions job - see gh api repos/jay-withers/renovate/rulesets.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "validate", integration_id = 15368 },
+    ]
+  }
+
+  "dev-containers" = {
+    description = "Multi-arch VS Code dev container images - base, terraform and k8s - built from a shared base and published to ghcr.io for any repo to reference"
+    topics      = ["devcontainer", "docker", "ghcr", "azure"]
+    # Referenced by tag from each repo's .devcontainer/devcontainer.json, so
+    # nothing is built locally and every repo gets the same tool versions CI has.
+    # Tooling that belongs to everyone goes in `base`; anything Terraform- or
+    # Kubernetes-specific goes in the image above it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+  }
+
+  "toolchain" = {
+    description = "Bootstrap script that installs the Azure, Kubernetes and Terraform toolchain on a fresh WSL or macOS machine"
+    topics      = ["bootstrap", "macos", "wsl", "azure"]
+    # The bare-metal counterpart to dev-containers: what you run on a new laptop
+    # before any repo is cloned. The dev container images cover everything after
+    # that, so these two should stay roughly in step on tool choice.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+  }
+
+  "template-repo-base" = {
+    description = "Language-agnostic repository template: dev container, pre-commit hooks, CI workflows, Renovate and Conventional Commits, with no application code"
+    topics      = ["template", "scaffolding"]
+    # The floor every new repo starts from. `generated_from_template` elsewhere
+    # in this file records which repos came from a template, but GitHub applies
+    # it only at creation - changing it later does nothing, so a template change
+    # never propagates to repos already made from it.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+  }
+
+  "template-repo-terraform-root" = {
+    description = "Repository template for an Azure Terraform root configuration: template-repo-base plus Terraform pre-commit hooks, tflint, terraform-docs and checkov"
+    topics      = ["template", "scaffolding", "terraform", "azure"]
+    # The starting point for every Terraform repo above; market-agent is the one
+    # recorded as generated from it. Note the name is the only thing template
+    # about it - it is a plain repo, and its own CI runs against the scaffold.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+  }
+
+  # ---------------------------------------------------------------------------
+  # Standalone. Not part of the estate and not consumed by anything.
+  # ---------------------------------------------------------------------------
+
+  "git-demo" = {
+    description = "A hands-on git walkthrough for someone who has never used it, with pre-commit hooks switched on deliberately so some commits get rejected"
+    topics      = ["git", "learning", "tutorial"]
+    # Teaching material rather than infrastructure. It carries no CI workflows
+    # and no renovate.json on purpose, so it will show up in repo-agent's digest
+    # as missing both - expected, not a defect, and the reason that agent reports
+    # rather than enforces.
   }
 }
 
