@@ -142,6 +142,26 @@ repos = {
     ]
   }
 
+  "gym-log" = {
+    description = "Twice-weekly full-body training log with progression suggestions, replacing a spreadsheet, on the shared Container Apps environment"
+    topics      = ["azure", "python", "fastapi", "container-apps"]
+    # The second tenant of azure-container-apps, and the first `container app`
+    # on it rather than a scheduled job — so it is also the first thing there
+    # with ingress, scale-to-zero replicas and a URL. Owns its own resource
+    # group, Key Vault, identity and storage account; reaches the environment
+    # by name.
+    #
+    # Its blob holds training history that nothing reconstructs, which is why
+    # that storage account is the one resource in the estate carrying
+    # `prevent_destroy`.
+    #
+    # `required_status_checks` is deliberately absent on the first apply.
+    # Applying a context nothing has reported yet leaves every pull request
+    # pending for ever rather than failing it, and the contexts cannot be read
+    # off `gh pr checks` until a pull request has actually run. Add them in a
+    # second apply once gym-log#1 reports, exactly as repo-agent's were.
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -276,5 +296,9 @@ state_consumers = {
 
   "repo-agent" = {
     github_repo = "jay-withers/repo-agent"
+  }
+
+  "gym-log" = {
+    github_repo = "jay-withers/gym-log"
   }
 }
