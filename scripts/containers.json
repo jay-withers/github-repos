@@ -1,5 +1,6 @@
 [
   "github-repos",
   "azure-container-apps",
-  "repo-agent"
+  "repo-agent",
+  "gym-log"
 ]
