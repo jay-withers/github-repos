@@ -116,7 +116,7 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
 ## Renovate
 
 `renovate.json` extends the shared preset
-`github>jay-withers/template-renovate` (see that repo for the policy: batched
+`github>jay-withers/renovate` (see that repo for the policy: batched
 Monday schedule, automerge of non-major dev deps/pins/digests via
 `platformAutomerge` — which needs repo-level auto-merge, set by `terraform/`
 (see GitHub repo settings below) — dependency dashboard, semantic commits,
