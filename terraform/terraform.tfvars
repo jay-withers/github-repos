@@ -24,9 +24,13 @@ repos = {
     # groups and identities to the spokes. Both must be applied before any spoke
     # can deploy. Also the home of the `allowed-locations-dev` policy assignment
     # that confines everything else to westeurope/northeurope.
+    # `terraform / Terraform` comes from the shared workflow and `terraform-plan`
+    # from the credentialled plan job the repo keeps locally — the same half-shared
+    # split as market-agent and repo-agent.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
     ]
   }
 
