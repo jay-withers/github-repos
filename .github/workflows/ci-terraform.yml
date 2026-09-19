@@ -21,6 +21,4 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    # TODO: re-pin to the released tag's SHA once jay-withers/workflows has cut
-    # a release containing the validate-only terraform.yml.
-    uses: jay-withers/workflows/.github/workflows/terraform.yml@main
+    uses: jay-withers/workflows/.github/workflows/terraform.yml@e37b7fe5708196c79e0469510f5c50b26d157194 # v1.4.1
