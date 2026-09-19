@@ -10,4 +10,4 @@ jobs:
   tag:
     permissions:
       contents: write
-    uses: jay-withers/workflows/.github/workflows/release.yml@944b2861b22b81934f91f3e2d7e4c56c5dc17da8 # v0.2.9
+    uses: jay-withers/workflows/.github/workflows/release.yml@a4133d77f379bc1f3cd69870a75542facf306567 # v1.4.2
