@@ -32,6 +32,7 @@ it (VS Code: "Dev Containers: Rebuild Container") to pick up an image change.
 ```bash
 make install           # install pre-commit hooks (run once after cloning)
 make lint               # run all pre-commit hooks against every file
+make bootstrap          # create/update the shared Terraform state account — see terraform/README.md's Auth section
 make init/fmt/validate/plan/apply/destroy  # terraform/ — see terraform/README.md for required auth
 ```
 

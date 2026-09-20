@@ -18,7 +18,8 @@ provider.
   container-scoped identity per entry in `var.state_consumers`, federated to
   that repo's GitHub Actions. This is the only Azure-facing part of this
   module; everything else above is GitHub. The account itself is created by
-  `../scripts/bootstrap-state.ps1`, not Terraform — see its header comment.
+  `make bootstrap` (`../scripts/bootstrap-state.ps1`), not Terraform — see its
+  header comment.
 
 Settings common to every repo live once in `locals.tf` (`repo_defaults`,
 `ruleset_defaults`), taken from `jay-withers/terraform-root-aks`'s live
@@ -37,10 +38,10 @@ Remote: the `backend "azurerm"` block lives in `versions.tf` (not a separate
 `backend.tf`), pointing at the "shared" storage account this module also
 manages access to (see "What it manages" above) — `rg-tfstate-shared` /
 `sttfsharedjw` / the `github-repos` container. That account is created by
-`../scripts/bootstrap-state.ps1`, not Terraform — see its header comment for
-why. Durability comes from the storage account's blob versioning and 30-day
-soft-delete (also set up by that script), not from any Terraform-side
-recovery mechanism — there's no `import` block anywhere in this module,
+`make bootstrap` (`../scripts/bootstrap-state.ps1`), not Terraform — see its
+header comment for why. Durability comes from the storage account's blob
+versioning and 30-day soft-delete (also set up by that script), not from any
+Terraform-side recovery mechanism — there's no `import` block anywhere in this module,
 deliberately: every resource it manages already exists in state, so plans
 diff against real state rather than trying to re-derive it from live GitHub
 data.
@@ -76,8 +77,9 @@ the ruleset's Admin `bypass_actors` exemption:
 - **Local**: Azure CLI, logged in, with Owner or Contributor + User Access
   Administrator on the subscription, and `ARM_SUBSCRIPTION_ID` exported (the
   provider doesn't infer it from the `az` context). That same `az` login is
-  also all `../scripts/bootstrap-state.ps1` needs — it shells out to the CLI
-  rather than the Az PowerShell modules — plus PowerShell 7+ to run it.
+  also all `make bootstrap` (`../scripts/bootstrap-state.ps1`) needs — it
+  shells out to the CLI rather than the Az PowerShell modules — plus
+  PowerShell 7+ to run it.
 - **CI**: OIDC, not a secret — `ci-terraform.yml`'s `plan` job is gated on
   the `AZURE_CLIENT_ID` repository variable, exactly like
   `terraform-root-aks`'s. **Until that variable (and `AZURE_TENANT_ID`/

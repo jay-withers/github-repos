@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install lint init fmt validate plan apply destroy
+.PHONY: help install lint bootstrap init fmt validate plan apply destroy
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -12,6 +12,9 @@ install: ## Install pre-commit hooks (run once after cloning)
 
 lint: ## Run all pre-commit hooks against every file
 	pre-commit run --all-files
+
+bootstrap: ## Create/update the shared Terraform state account (see scripts/bootstrap-state.ps1); needs az login
+	pwsh scripts/bootstrap-state.ps1
 
 init: ## terraform init (see terraform/README.md for required auth)
 	terraform -chdir=terraform init
