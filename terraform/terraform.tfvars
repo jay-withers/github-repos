@@ -166,6 +166,21 @@ repos = {
     # second apply once gym-log#1 reports, exactly as repo-agent's were.
   }
 
+  "finances" = {
+    description             = "Personal finance tracker, on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "finance"]
+    generated_from_template = "template-repo-terraform-root"
+    # A third tenant of azure-container-apps, same shape as gym-log: its own
+    # resource group, Key Vault, identity and storage account, reaching the
+    # shared environment by name rather than running its own.
+    #
+    # `required_status_checks` is deliberately absent on the first apply, same
+    # reasoning as gym-log's - applying a context nothing has reported yet
+    # leaves every pull request pending for ever, and the contexts can't be
+    # read off `gh pr checks` until a pull request has actually run. Add them
+    # in a second apply once finances#1 reports.
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -304,5 +319,9 @@ state_consumers = {
 
   "gym-log" = {
     github_repo = "jay-withers/gym-log"
+  }
+
+  "finances" = {
+    github_repo = "jay-withers/finances"
   }
 }
