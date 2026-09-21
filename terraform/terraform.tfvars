@@ -42,9 +42,17 @@ repos = {
     # variable and the cluster's identity cannot create resource groups. It
     # creates both halves of the hub peering, since one side alone stays
     # Initiated.
+    #
+    # `changes`/`validate` (ci-gitops.yml) are deliberately absent - that
+    # workflow's own comment says only `ci-gitops` is meant to be required:
+    # `changes` is an internal detection leg and `validate` skips conditionally
+    # with no `if: always()` wrapper around it, so requiring it directly would
+    # leave a non-GitOps PR pending for ever. `ci-gitops` is the always-running
+    # gate over both, same shape as this repo's own `ci-terraform`.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "ci-gitops" },
     ]
   }
 
@@ -111,11 +119,15 @@ repos = {
     # That workflow *is* filtered on its trigger (paths: apps/**), so on a
     # Terraform-only PR it never runs and never reports - and a required check
     # that never reports leaves the PR pending for ever rather than failing it.
+    # `Layout` (ci-dashboard.yml) runs unconditionally on every PR, unlike the
+    # build jobs above, so it doesn't share that failure mode - read off
+    # `gh pr checks` on market-agent#68.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
+      { context = "Layout" },
     ]
   }
 
@@ -159,11 +171,17 @@ repos = {
     # that storage account is the one resource in the estate carrying
     # `prevent_destroy`.
     #
-    # `required_status_checks` is deliberately absent on the first apply.
-    # Applying a context nothing has reported yet leaves every pull request
-    # pending for ever rather than failing it, and the contexts cannot be read
-    # off `gh pr checks` until a pull request has actually run. Add them in a
-    # second apply once gym-log#1 reports, exactly as repo-agent's were.
+    # Read literally off `gh pr checks` on gym-log#17, not inferred from the
+    # workflow files. `terraform / Validate (...)`/`terraform / Test (...)` and
+    # `build / Build gymlog` are deliberately absent, same reasoning as
+    # repo-agent's `build` context: the matrix legs only run conditionally and
+    # ci-container-build's build job is path-filtered, so a required check that
+    # never reports on some PRs would leave those pending for ever.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "terraform / Terraform" },
+    ]
   }
 
   "finances" = {
@@ -174,11 +192,17 @@ repos = {
     # resource group, Key Vault, identity and storage account, reaching the
     # shared environment by name rather than running its own.
     #
-    # `required_status_checks` is deliberately absent on the first apply, same
-    # reasoning as gym-log's - applying a context nothing has reported yet
-    # leaves every pull request pending for ever, and the contexts can't be
-    # read off `gh pr checks` until a pull request has actually run. Add them
-    # in a second apply once finances#1 reports.
+    # Read literally off `gh pr checks` on finances#12, not inferred from the
+    # workflow files. `terraform / Validate (...)`/`terraform / Test (...)` and
+    # `build / Build finances` are deliberately absent, same reasoning as
+    # gym-log's: the matrix legs only run conditionally and ci-container-build's
+    # build job is path-filtered, so a required check that never reports on
+    # some PRs would leave those pending for ever.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "terraform / Terraform" },
+    ]
   }
 
   # ---------------------------------------------------------------------------
@@ -246,8 +270,15 @@ repos = {
     # nothing is built locally and every repo gets the same tool versions CI has.
     # Tooling that belongs to everyone goes in `base`; anything Terraform- or
     # Kubernetes-specific goes in the image above it.
+    #
+    # `base (...)`/`leaves (...)` (ci-container-build.yml) are deliberately
+    # absent: that workflow's own `changes` job path-filters them to `images/**`,
+    # so a docs-only PR never runs them and a required check on either would be
+    # pending for ever. `changes` itself runs unconditionally - read off
+    # `gh pr checks` on dev-containers#73.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
+      { context = "changes" },
     ]
   }
 
@@ -257,8 +288,15 @@ repos = {
     # The bare-metal counterpart to dev-containers: what you run on a new laptop
     # before any repo is cloned. The dev container images cover everything after
     # that, so these two should stay roughly in step on tool choice.
+    #
+    # `linux`/`macos` (test-install.yml) are deliberately absent: they skip
+    # conditionally (only when `src/**` changes) with no always()-gate wrapping
+    # them, so requiring either directly would leave a docs-only PR pending for
+    # ever. `changes`, the detection job feeding them, runs unconditionally on
+    # every PR and is safe to require - read off `gh pr checks` on toolchain#40.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
+      { context = "changes" },
     ]
   }
 
