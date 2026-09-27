@@ -43,16 +43,22 @@ repos = {
     # creates both halves of the hub peering, since one side alone stays
     # Initiated.
     #
-    # `changes`/`validate` (ci-gitops.yml) are deliberately absent - that
-    # workflow's own comment says only `ci-gitops` is meant to be required:
-    # `changes` is an internal detection leg and `validate` skips conditionally
-    # with no `if: always()` wrapper around it, so requiring it directly would
-    # leave a non-GitOps PR pending for ever. `ci-gitops` is the always-running
-    # gate over both, same shape as this repo's own `ci-terraform`.
+    # `ci-gitops` is the always-running (`if: always()`) gate over `validate`,
+    # same shape as this repo's own `ci-terraform`, and stays required. But
+    # `changes`/`validate` are safe to require too, not "pending forever" as
+    # previously assumed here: `validate` skips conditionally, but only the
+    # *job* is gated (`if: needs.changes.outputs.gitops`) - the workflow's own
+    # `on: pull_request` has no path filter, so both jobs are always created
+    # and a skip reports a completed "skipped" conclusion, which GitHub's
+    # required status checks treat as passing. Confirmed by reading
+    # `gh pr checks` on terraform-root-aks#52 rather than inferring it from
+    # the YAML.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
       { context = "ci-gitops" },
+      { context = "changes" },
+      { context = "validate" },
     ]
   }
 
