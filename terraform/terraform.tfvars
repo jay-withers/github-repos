@@ -307,14 +307,20 @@ repos = {
     # before any repo is cloned. The dev container images cover everything after
     # that, so these two should stay roughly in step on tool choice.
     #
-    # `linux`/`macos` (test-install.yml) are deliberately absent: they skip
-    # conditionally (only when `src/**` changes) with no always()-gate wrapping
-    # them, so requiring either directly would leave a docs-only PR pending for
-    # ever. `changes`, the detection job feeding them, runs unconditionally on
-    # every PR and is safe to require - read off `gh pr checks` on toolchain#40.
+    # `linux`/`macos` (test-install.yml) skip conditionally (only when `src/**`
+    # changes), but the workflow's own `on: pull_request` trigger has no path
+    # filter, so both jobs are always created and report a completed "skipped"
+    # conclusion rather than never running at all - GitHub treats a skipped
+    # required check as passing, not pending. That's what makes them safe to
+    # require directly, unlike career's ci-container-build (a workflow-level
+    # `paths:` filter, which never creates the check run on a non-matching PR
+    # and would leave a required check pending forever). Confirmed by reading
+    # `gh pr checks` on toolchain#40 rather than inferring it from the YAML.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "changes" },
+      { context = "linux" },
+      { context = "macos" },
     ]
   }
 
