@@ -205,6 +205,24 @@ repos = {
     ]
   }
 
+  "career" = {
+    description             = "Career profile, LinkedIn-export import, job-opportunity aggregation and market/advancement insights, on the shared Container Apps environment"
+    topics                  = ["azure", "python", "fastapi", "container-apps"]
+    generated_from_template = "template-repo-terraform-root"
+    # A fourth tenant of azure-container-apps, same shape as gym-log/finances:
+    # its own resource group, Key Vault, identity and storage account,
+    # reaching the shared environment by name rather than running its own.
+    #
+    # Contexts below are provisional until real CI exists and `gh pr checks`
+    # confirms the literal reported strings, same caveat as every other entry
+    # in this file.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
+      { context = "terraform / Terraform" },
+    ]
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -361,5 +379,9 @@ state_consumers = {
 
   "finances" = {
     github_repo = "jay-withers/finances"
+  }
+
+  "career" = {
+    github_repo = "jay-withers/career"
   }
 }
