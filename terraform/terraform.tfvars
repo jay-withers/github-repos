@@ -296,13 +296,17 @@ repos = {
     # Kubernetes-specific goes in the image above it.
     #
     # `base (...)`/`leaves (...)` (ci-container-build.yml) are deliberately
-    # absent: that workflow's own `changes` job path-filters them to `images/**`,
-    # so a docs-only PR never runs them and a required check on either would be
-    # pending for ever. `changes` itself runs unconditionally - read off
-    # `gh pr checks` on dev-containers#73.
+    # absent: that workflow path-filters them to `images/**`, so a docs-only PR
+    # never runs them and a required check on either would be pending for
+    # ever. Require its `ci-container-build` gate job instead - it depends on
+    # changes/base/leaves and always reports, failing only if one of them
+    # actually failed (a path-filtered skip still passes). Requiring the bare
+    # `changes` job here (as this used to) didn't catch that: `changes` always
+    # succeeds regardless of whether base/leaves themselves passed, which is
+    # how dev-containers#81 merged with its arm64 build broken.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
-      { context = "changes" },
+      { context = "ci-container-build" },
     ]
   }
 
