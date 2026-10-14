@@ -54,5 +54,20 @@ resource "github_repository_ruleset" "main" {
         }
       }
     }
+
+    # Code scanning merge protection: a pull request that introduces a CodeQL
+    # alert at or above local.code_scanning_thresholds cannot merge. Conditional
+    # for the same reason as required_status_checks above, and because the
+    # rule needs CodeQL results to exist — see var.repos' code_scanning.
+    dynamic "required_code_scanning" {
+      for_each = each.value.code_scanning ? [true] : []
+      content {
+        required_code_scanning_tool {
+          tool                      = "CodeQL"
+          security_alerts_threshold = local.code_scanning_thresholds.security_alerts
+          alerts_threshold          = local.code_scanning_thresholds.alerts
+        }
+      }
+    }
   }
 }

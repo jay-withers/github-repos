@@ -135,6 +135,8 @@ repos = {
       { context = "terraform-plan" },
       { context = "Layout" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   "repo-agent" = {
@@ -162,6 +164,8 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   "gym-log" = {
@@ -188,6 +192,8 @@ repos = {
       { context = "test / Test" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   "finances" = {
@@ -209,6 +215,8 @@ repos = {
       { context = "test / Test" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   "career" = {
@@ -227,6 +235,8 @@ repos = {
       { context = "test / Test" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   "security-testing" = {
@@ -248,6 +258,8 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
+    code_scanning = true
   }
 
   # ---------------------------------------------------------------------------
