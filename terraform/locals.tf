@@ -37,6 +37,16 @@ locals {
     required_review_thread_resolution = true
   }
 
+  # What a new CodeQL alert has to be to block a merge, on repos with
+  # code_scanning = true. high_or_higher is where injection, path traversal
+  # and SSRF land; medium and below still show on the pull request and in the
+  # Security tab, but would block on too many judgement calls to be a gate.
+  # `errors` is the same idea for CodeQL's non-security (quality) results.
+  code_scanning_thresholds = {
+    security_alerts = "high_or_higher"
+    alerts          = "errors"
+  }
+
   # Bypass actors on every ruleset: the repo Admin role, and the Renovate
   # GitHub App (id from `gh api apps/renovate --jq .id`). Both `always`. GitHub
   # only honours bypass_actors on organization-owned repos - jay-withers is a

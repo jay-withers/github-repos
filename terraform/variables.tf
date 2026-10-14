@@ -11,6 +11,12 @@ variable "repos" {
       context        = string
       integration_id = optional(number)
     })), [])
+    # Block merges into main on new CodeQL alerts at local.code_scanning_thresholds.
+    # Only for repos that actually run CodeQL (ci-codeql.yml calling
+    # jay-withers/workflows' codeql.yml): the rule waits for CodeQL results on
+    # the pull request, so turning it on for a repo with no analysis would
+    # leave every pull request unmergeable.
+    code_scanning = optional(bool, false)
   }))
   # No default - see terraform.tfvars for the actual repo list.
 }
