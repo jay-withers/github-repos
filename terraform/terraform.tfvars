@@ -229,6 +229,27 @@ repos = {
     ]
   }
 
+  "security-testing" = {
+    description             = "Scheduled security scanner that runs DAST and vulnerability checks against every jay-withers app, on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "security", "pentest"]
+    generated_from_template = "template-repo-terraform-root"
+    # A fifth tenant of azure-container-apps, and the second scheduled job
+    # there after repo-agent: its own resource group, Key Vault, identity and
+    # job, reaching the shared environment by name. It only targets
+    # jay-withers' own apps.
+    #
+    # Public like every repo in this file, so it holds tooling and config only.
+    # Findings are never committed: they leave the job by some other route
+    # (blob storage or a digest), not through git.
+    #
+    # Contexts below are provisional until real CI exists and `gh pr checks`
+    # confirms the literal reported strings, same caveat as career's.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -399,5 +420,9 @@ state_consumers = {
 
   "career" = {
     github_repo = "jay-withers/career"
+  }
+
+  "security-testing" = {
+    github_repo = "jay-withers/security-testing"
   }
 }
