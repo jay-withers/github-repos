@@ -70,4 +70,15 @@ resource "github_repository_ruleset" "main" {
       }
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      # GitHub accepts bypass_actors on a User-owned repo's ruleset but
+      # silently drops them (see CLAUDE.md's GitHub repo settings), so the
+      # provider reads back none and every plan shows them being re-added to
+      # every repo. They're still sent on create, so they take effect if the
+      # account ever moves to an org - drop this then.
+      bypass_actors,
+    ]
+  }
 }
