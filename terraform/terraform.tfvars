@@ -262,6 +262,32 @@ repos = {
     code_scanning = true
   }
 
+  "azure-support-agent" = {
+    description             = "Self-hosted deployment of zmustafa/AzureSupportAgent, an AI-driven Azure operations workbench, on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "llm", "sre"]
+    generated_from_template = "template-repo-terraform-root"
+    # A sixth tenant of azure-container-apps: its own resource group, Key
+    # Vault, identity and container app, reaching the shared environment by
+    # name. The application itself is upstream's (MIT-licensed, FastAPI +
+    # React) - this repo holds the Terraform and config that run it here, not
+    # a fork of its source, so upstream releases are picked up by bumping a
+    # pinned version rather than merging.
+    #
+    # Public like every repo in this file, so it holds no tenant data or
+    # secrets: credentials for the tenant it reads live in its Key Vault.
+    #
+    # No code_scanning: with no application source of its own there is
+    # nothing for CodeQL to analyse, and the rule would block every PR
+    # waiting for results that never arrive.
+    #
+    # Contexts below are provisional until real CI exists and `gh pr checks`
+    # confirms the literal reported strings, same caveat as career's.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -436,5 +462,9 @@ state_consumers = {
 
   "security-testing" = {
     github_repo = "jay-withers/security-testing"
+  }
+
+  "azure-support-agent" = {
+    github_repo = "jay-withers/azure-support-agent"
   }
 }
