@@ -31,3 +31,8 @@ data "azurerm_resource_group" "deploy" {
 
   name = each.value.resource_group
 }
+
+# The owner's numeric ID, for OIDC subjects - see local.state_federated_credentials.
+data "github_user" "owner" {
+  username = "jay-withers"
+}
