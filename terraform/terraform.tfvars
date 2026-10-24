@@ -299,7 +299,8 @@ repos = {
     # This repo, and the catalogue you are reading. It is the single source of
     # truth for which repositories exist, their descriptions, topics and branch
     # protection, plus the shared Terraform state storage account and the OIDC
-    # identities that let each repo plan against it.
+    # identities that let each repo plan against it (and, for those with
+    # `deploy_resource_groups`, apply on merge).
     #
     # It plans in CI but never applies: a change takes effect when someone runs
     # `make apply` against remote state. Because that reads local tfvars, it can
@@ -455,8 +456,11 @@ state_consumers = {
     github_repo = "jay-withers/github-repos"
   }
 
+  # Applies dev on merge to main (cd-terraform), so it also gets Contributor
+  # on its dev resource group - see deploy.tf.
   "azure-container-apps" = {
-    github_repo = "jay-withers/azure-container-apps"
+    github_repo            = "jay-withers/azure-container-apps"
+    deploy_resource_groups = ["rg-platform-dev"]
   }
 
   "repo-agent" = {

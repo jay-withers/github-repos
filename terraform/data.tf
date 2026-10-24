@@ -22,3 +22,12 @@ data "azurerm_storage_container" "consumer" {
   name               = each.key
   storage_account_id = data.azurerm_storage_account.state.id
 }
+
+# Resource groups a consumer's pipeline applies into. Looked up, never
+# created: each repo owns its own resource group, and creates it with a local
+# apply before its pipeline takes over.
+data "azurerm_resource_group" "deploy" {
+  for_each = local.deploy_resource_groups
+
+  name = each.value.resource_group
+}
