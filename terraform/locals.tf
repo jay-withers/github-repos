@@ -82,6 +82,16 @@ locals {
 
   deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
 
+  join_container_app_environments = merge([
+    for key, c in var.state_consumers : {
+      for env in c.join_container_app_environments : "${key}-${env.resource_group}-${env.name}" => {
+        consumer       = key
+        resource_group = env.resource_group
+        name           = env.name
+      }
+    }
+  ]...)
+
   # The default subject uses GitHub's immutable form,
   # repo:<owner>@<owner id>/<repo>@<repo id>, which every consumer's token
   # carries (`use_immutable_subject` in

@@ -58,12 +58,23 @@ variable "state_consumers" {
     subscription so plans can resolve providers and other repos' resources
     by data source. Empty (the default) keeps the identity state-only. Each
     group must already exist - create it with a local apply first.
+
+    `join_container_app_environments` lists Container Apps environments in
+    other repos' resource groups that the consumer's apps and jobs run on.
+    Writing a container app or job - a Terraform apply or an image deploy -
+    needs `Microsoft.App/managedEnvironments/join/action` on its environment,
+    which Contributor on the consumer's own resource group doesn't cover.
+    Each entry gets the narrow custom role in deploy.tf on that environment.
   DESCRIPTION
 
   type = map(object({
     github_repo            = string
     federated_subjects     = optional(map(string))
     deploy_resource_groups = optional(list(string), [])
+    join_container_app_environments = optional(list(object({
+      resource_group = string
+      name           = string
+    })), [])
   }))
 
   default = {}

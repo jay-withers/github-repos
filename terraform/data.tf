@@ -32,6 +32,15 @@ data "azurerm_resource_group" "deploy" {
   name = each.value.resource_group
 }
 
+# Container Apps environments a consumer's workloads run on, owned by another
+# repo (azure-container-apps). Looked up, never created.
+data "azurerm_container_app_environment" "join" {
+  for_each = local.join_container_app_environments
+
+  name                = each.value.name
+  resource_group_name = each.value.resource_group
+}
+
 # The owner's numeric ID, for OIDC subjects - see local.state_federated_credentials.
 data "github_user" "owner" {
   username = "jay-withers"
