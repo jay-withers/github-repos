@@ -393,6 +393,21 @@ repos = {
     ]
   }
 
+  "factory" = {
+    description             = "Front door for working across every jay-withers repository with Claude Code: clones them all on demand and ships each change as a PR in the repo it belongs to"
+    topics                  = ["claude-code", "automation", "devcontainer"]
+    generated_from_template = "template-repo-base"
+    # Holds no application code of its own. It reads this file's repos (via
+    # `gh repo list`, which returns the descriptions and topics applied from
+    # here) into a gitignored repos/ folder, and does each task in a git
+    # worktree of the target repo, so every change still lands through that
+    # repo's own CI and "Protect main" ruleset. Merging and `make apply` stay
+    # human steps - its .claude/settings.json denies both.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+  }
+
   "template-repo-base" = {
     description = "Language-agnostic repository template: dev container, pre-commit hooks, CI workflows, Renovate and Conventional Commits, with no application code"
     topics      = ["template", "scaffolding"]
