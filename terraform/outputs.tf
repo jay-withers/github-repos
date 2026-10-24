@@ -20,7 +20,7 @@ output "state_backend_config" {
 # The three values a consumer's GitHub Actions workflow needs - mirrors
 # azure-landingzone's landingzones/bootstrap github_secrets output.
 output "state_github_secrets" {
-  description = "Repository variables to set on each state consumer's repo."
+  description = "Environment variables set on each state consumer's dev environment by actions.tf."
 
   value = {
     for key, c in var.state_consumers : c.github_repo => {
