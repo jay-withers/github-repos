@@ -58,9 +58,10 @@ locals {
 
   # Federated credential names must be unique per identity and cannot contain
   # the ":" and "/" that appear in a subject, so the map key supplies the name
-  # and the value supplies the subject. Defaults cover a plan-on-PR /
-  # apply-on-merge pipeline - same shape as azure-landingzone's landingzones
-  # and bootstrap components. The key is never parsed back apart anywhere, so
+  # and the value supplies the subject. The default is a single `dev` GitHub
+  # environment subject: CI (plan) and CD (apply) jobs both declare
+  # `environment: dev`, which makes the OIDC subject the environment rather
+  # than the ref, so one credential covers both. The key is never parsed back apart anywhere, so
   # a plain "-" join (not "--") is fine even though both halves can
   # themselves contain hyphens.
   # One entry per consumer and resource group it deploys into, keyed
@@ -79,11 +80,28 @@ locals {
   state_federated_credentials = merge([
     for key, c in var.state_consumers : {
       for name, subject in coalesce(c.federated_subjects, {
-        "pull-request" = "repo:${c.github_repo}:pull_request"
-        "main"         = "repo:${c.github_repo}:ref:refs/heads/main"
+        "dev" = "repo:${c.github_repo}:environment:dev"
         }) : "${key}-${name}" => {
         consumer = key
         subject  = subject
+      }
+    }
+  ]...)
+
+  # The repository variables a consumer's workflow logs in to Azure with -
+  # one entry per consumer and variable, keyed "<consumer>-<variable>" for the
+  # same reason as above. None of these are secret, so they're Actions
+  # variables (vars.*), not secrets.
+  state_github_variables = merge([
+    for key, c in var.state_consumers : {
+      for name, value in {
+        AZURE_CLIENT_ID       = azurerm_user_assigned_identity.state[key].client_id
+        AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
+        AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
+        } : "${key}-${name}" => {
+        repository = split("/", c.github_repo)[1]
+        name       = name
+        value      = value
       }
     }
   ]...)

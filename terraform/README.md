@@ -21,6 +21,10 @@ provider.
   (`deploy.tf`) — for consumers whose pipeline applies, not just plans:
   Contributor on each of their `deploy_resource_groups`, and Reader on the
   subscription.
+- `github_actions_variable.state` (`actions.tf`) — `AZURE_CLIENT_ID`,
+  `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` set as Actions variables on
+  each `var.state_consumers` repo, so its workflow can `azure/login` with the
+  identity above. Every consumer must also be in `var.repos`.
 
   These are the only Azure-facing parts of this module; everything else
   above is GitHub. The account itself is created by
@@ -93,10 +97,9 @@ the ruleset's Admin `bypass_actors` exemption:
   changes included**, not just the Azure resources: `terraform init`
   initializes the whole configuration, backend included, in one step, so
   there's no way to plan just the GitHub side without Azure credentials once
-  a real backend is configured. Set the three variables from this repo's own
-  `state_github_secrets` output (`terraform output state_github_secrets`,
-  after `make apply` has created this repo's identity — see "What it
-  manages" above) via `gh variable set`/`gh secret set`.
+  a real backend is configured. `make apply` sets all three on every state
+  consumer's repo, this one included (`actions.tf`) — no manual
+  `gh variable set` needed.
 
 Never paste either credential into chat, commits, or these files —
 `gitleaks` (pre-commit and CI) is only a backstop, not a substitute for care.
@@ -148,6 +151,7 @@ and its ruleset.
 | [azurerm_role_assignment.deploy_reader](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.state_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_user_assigned_identity.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |
+| [github_actions_variable.state](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/actions_variable) | resource |
 | [github_repository.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository) | resource |
 | [github_repository_ruleset.main](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset) | resource |
 | [github_repository_vulnerability_alerts.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_vulnerability_alerts) | resource |
