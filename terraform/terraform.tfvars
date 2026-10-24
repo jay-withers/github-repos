@@ -468,30 +468,48 @@ state_consumers = {
   "repo-agent" = {
     github_repo            = "jay-withers/repo-agent"
     deploy_resource_groups = ["rg-repoagent-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   "gym-log" = {
     github_repo            = "jay-withers/gym-log"
     deploy_resource_groups = ["rg-gymlog-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   "finances" = {
     github_repo            = "jay-withers/finances"
     deploy_resource_groups = ["rg-finances-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   "career" = {
     github_repo            = "jay-withers/career"
     deploy_resource_groups = ["rg-career-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   "security-testing" = {
     github_repo            = "jay-withers/security-testing"
     deploy_resource_groups = ["rg-sectest-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   "azure-support-agent" = {
     github_repo            = "jay-withers/azure-support-agent"
     deploy_resource_groups = ["rg-supportagent-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 }

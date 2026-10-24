@@ -23,3 +23,36 @@ resource "azurerm_role_assignment" "deploy_reader" {
   principal_id         = azurerm_user_assigned_identity.state[each.key].principal_id
   principal_type       = "ServicePrincipal"
 }
+
+# Joining a Container Apps environment is a linked permission: writing a
+# container app or job checks `Microsoft.App/managedEnvironments/join/action`
+# on its environment as well as write on the app itself, and fails with
+# LinkedAuthorizationFailed without it. No built-in role grants join without
+# also granting write on the environment, which belongs to
+# azure-container-apps, so this custom role carries join and read and
+# nothing else.
+resource "azurerm_role_definition" "container_app_environment_join" {
+  count = length(local.join_container_app_environments) > 0 ? 1 : 0
+
+  name        = "Container Apps Environment Joiner"
+  scope       = data.azurerm_subscription.current.id
+  description = "Run container apps and jobs on a Container Apps environment without changing it. Managed by jay-withers/github-repos."
+
+  permissions {
+    actions = [
+      "Microsoft.App/managedEnvironments/read",
+      "Microsoft.App/managedEnvironments/join/action",
+    ]
+  }
+
+  assignable_scopes = [data.azurerm_subscription.current.id]
+}
+
+resource "azurerm_role_assignment" "deploy_join" {
+  for_each = local.join_container_app_environments
+
+  scope              = data.azurerm_container_app_environment.join[each.key].id
+  role_definition_id = azurerm_role_definition.container_app_environment_join[0].role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.state[each.value.consumer].principal_id
+  principal_type     = "ServicePrincipal"
+}
