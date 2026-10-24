@@ -63,6 +63,19 @@ locals {
   # and bootstrap components. The key is never parsed back apart anywhere, so
   # a plain "-" join (not "--") is fine even though both halves can
   # themselves contain hyphens.
+  # One entry per consumer and resource group it deploys into, keyed
+  # "<consumer>-<resource group>" for the same reason as above.
+  deploy_resource_groups = merge([
+    for key, c in var.state_consumers : {
+      for rg in c.deploy_resource_groups : "${key}-${rg}" => {
+        consumer       = key
+        resource_group = rg
+      }
+    }
+  ]...)
+
+  deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
+
   state_federated_credentials = merge([
     for key, c in var.state_consumers : {
       for name, subject in coalesce(c.federated_subjects, {

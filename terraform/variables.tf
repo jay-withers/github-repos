@@ -52,11 +52,18 @@ variable "state_consumers" {
     are created by scripts/bootstrap-state.ps1, so add the key to that
     script's containers.json (and re-run it) before adding it here, or the
     container data source lookup fails.
+
+    `deploy_resource_groups` lists the resource groups the consumer's
+    pipeline may apply into: Contributor on each, plus Reader on the
+    subscription so plans can resolve providers and other repos' resources
+    by data source. Empty (the default) keeps the identity state-only. Each
+    group must already exist - create it with a local apply first.
   DESCRIPTION
 
   type = map(object({
-    github_repo        = string
-    federated_subjects = optional(map(string))
+    github_repo            = string
+    federated_subjects     = optional(map(string))
+    deploy_resource_groups = optional(list(string), [])
   }))
 
   default = {}
