@@ -25,7 +25,7 @@ resource "azurerm_user_assigned_identity" "state" {
   resource_group_name = data.azurerm_resource_group.state.name
   tags = {
     owner     = "jay"
-    component = "state"
+    component = "identity"
   }
 }
 
