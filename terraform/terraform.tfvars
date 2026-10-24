@@ -452,38 +452,46 @@ repos = {
 # account itself is created. To add a consumer: add its container name to
 # scripts/containers.json and re-run that script, then add an entry here.
 state_consumers = {
+  # State only: everything this repo manages is GitHub plus role assignments,
+  # which Contributor couldn't create anyway, so it applies locally.
   "github-repos" = {
     github_repo = "jay-withers/github-repos"
   }
 
-  # Applies dev on merge to main (cd-terraform), so it also gets Contributor
-  # on its dev resource group - see deploy.tf.
+  # Every consumer below applies dev from its own pipeline, so each also gets
+  # Contributor on its dev resource group - see deploy.tf.
   "azure-container-apps" = {
     github_repo            = "jay-withers/azure-container-apps"
     deploy_resource_groups = ["rg-platform-dev"]
   }
 
   "repo-agent" = {
-    github_repo = "jay-withers/repo-agent"
+    github_repo            = "jay-withers/repo-agent"
+    deploy_resource_groups = ["rg-repoagent-dev"]
   }
 
   "gym-log" = {
-    github_repo = "jay-withers/gym-log"
+    github_repo            = "jay-withers/gym-log"
+    deploy_resource_groups = ["rg-gymlog-dev"]
   }
 
   "finances" = {
-    github_repo = "jay-withers/finances"
+    github_repo            = "jay-withers/finances"
+    deploy_resource_groups = ["rg-finances-dev"]
   }
 
   "career" = {
-    github_repo = "jay-withers/career"
+    github_repo            = "jay-withers/career"
+    deploy_resource_groups = ["rg-career-dev"]
   }
 
   "security-testing" = {
-    github_repo = "jay-withers/security-testing"
+    github_repo            = "jay-withers/security-testing"
+    deploy_resource_groups = ["rg-sectest-dev"]
   }
 
   "azure-support-agent" = {
-    github_repo = "jay-withers/azure-support-agent"
+    github_repo            = "jay-withers/azure-support-agent"
+    deploy_resource_groups = ["rg-supportagent-dev"]
   }
 }
