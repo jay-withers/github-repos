@@ -121,12 +121,11 @@ repos = {
     # `terraform-plan` is the always-reporting gate over those plan legs.
     # Dropping either context silently stops guarding half of the Terraform CI.
     #
-    # ci-container-build's two `build (...)` contexts are deliberately absent.
-    # That workflow *is* filtered on its trigger (paths: apps/**), so on a
-    # Terraform-only PR it never runs and never reports - and a required check
-    # that never reports leaves the PR pending for ever rather than failing it.
-    # `Layout` (ci-dashboard.yml) runs unconditionally on every PR, unlike the
-    # build jobs above, so it doesn't share that failure mode - read off
+    # ci-container-build's two `build (...)` contexts are deliberately absent:
+    # the build is path-filtered (apps/**), so it doesn't run on every PR.
+    # `container-build` is that workflow's always-reporting gate instead -
+    # passes when the build was skipped, fails when it failed (market-agent#109).
+    # `Layout` (ci-dashboard.yml) runs unconditionally on every PR - read off
     # `gh pr checks` on market-agent#68.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
@@ -134,6 +133,7 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
       { context = "Layout" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
@@ -163,6 +163,7 @@ repos = {
       { context = "test / Test" },
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
@@ -191,6 +192,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
@@ -214,6 +216,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
@@ -234,6 +237,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
@@ -257,6 +261,7 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
     code_scanning = true
