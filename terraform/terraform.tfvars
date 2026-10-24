@@ -192,6 +192,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
       { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
@@ -216,6 +217,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
       { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
@@ -237,6 +239,7 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
       { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
@@ -261,6 +264,7 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
       { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml), so new high/critical alerts block merges.
@@ -290,6 +294,7 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
     ]
   }
 
