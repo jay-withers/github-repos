@@ -1,8 +1,10 @@
 # One identity per consumer of the shared state storage account - always a
 # new one here, since (unlike azure-landingzone/terraform/bootstrap) nothing
-# in this repo already has an Azure identity to reuse. Named for the consumer
-# alone, not "-state": the same identity is also what the consumer's
-# pipeline deploys with (deploy.tf).
+# in this repo already has an Azure identity to reuse. Named
+# uai-<consumer>-deploy-<environment>, not "-state": the same identity is
+# what the consumer's pipeline deploys with (deploy.tf), and it's scoped to
+# one GitHub environment (local.state_environment) - a prod identity would
+# be a separate one with its own name.
 module "state_naming" {
   #checkov:skip=CKV_TF_1:Registry-sourced module pinned to a version constraint; commit-hash pinning does not apply to Terraform Registry sources.
   source  = "Azure/naming/azurerm"
@@ -10,7 +12,7 @@ module "state_naming" {
 
   for_each = var.state_consumers
 
-  suffix = [each.key]
+  suffix = [each.key, "deploy", local.state_environment]
 }
 
 # A user-assigned managed identity rather than an app registration: no Entra
