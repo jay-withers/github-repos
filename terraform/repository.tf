@@ -46,3 +46,12 @@ resource "github_repository" "this" {
     ]
   }
 }
+
+# Dependabot alerts only - update PRs stay with Renovate, whose security
+# updates read these alerts and are blind to CVEs without them.
+resource "github_repository_vulnerability_alerts" "this" {
+  for_each = github_repository.this
+
+  repository = each.value.name
+  enabled    = true
+}
