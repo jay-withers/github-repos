@@ -56,14 +56,19 @@ locals {
   admin_role_id   = 5
   renovate_app_id = 2740
 
+  # The GitHub environment every consumer's CI (plan) and CD (apply) jobs run
+  # in. Declaring `environment:` makes a job's OIDC subject the environment
+  # rather than the ref, so one federated credential covers both, and the
+  # Azure login variables live on the environment rather than the repo. A
+  # second environment (prod) would need its own identity anyway, so this is
+  # a single value, not a list.
+  state_environment = "dev"
+
   # Federated credential names must be unique per identity and cannot contain
   # the ":" and "/" that appear in a subject, so the map key supplies the name
-  # and the value supplies the subject. The default is a single `dev` GitHub
-  # environment subject: CI (plan) and CD (apply) jobs both declare
-  # `environment: dev`, which makes the OIDC subject the environment rather
-  # than the ref, so one credential covers both. The key is never parsed back apart anywhere, so
-  # a plain "-" join (not "--") is fine even though both halves can
-  # themselves contain hyphens.
+  # and the value supplies the subject. The key is never parsed back apart
+  # anywhere, so a plain "-" join (not "--") is fine even though both halves
+  # can themselves contain hyphens.
   # One entry per consumer and resource group it deploys into, keyed
   # "<consumer>-<resource group>" for the same reason as above.
   deploy_resource_groups = merge([
@@ -80,7 +85,7 @@ locals {
   state_federated_credentials = merge([
     for key, c in var.state_consumers : {
       for name, subject in coalesce(c.federated_subjects, {
-        "dev" = "repo:${c.github_repo}:environment:dev"
+        (local.state_environment) = "repo:${c.github_repo}:environment:${local.state_environment}"
         }) : "${key}-${name}" => {
         consumer = key
         subject  = subject
@@ -88,7 +93,7 @@ locals {
     }
   ]...)
 
-  # The repository variables a consumer's workflow logs in to Azure with -
+  # The environment variables a consumer's workflow logs in to Azure with -
   # one entry per consumer and variable, keyed "<consumer>-<variable>" for the
   # same reason as above. None of these are secret, so they're Actions
   # variables (vars.*), not secrets.
@@ -99,9 +104,9 @@ locals {
         AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
         AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
         } : "${key}-${name}" => {
-        repository = split("/", c.github_repo)[1]
-        name       = name
-        value      = value
+        consumer = key
+        name     = name
+        value    = value
       }
     }
   ]...)

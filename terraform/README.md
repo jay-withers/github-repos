@@ -21,10 +21,13 @@ provider.
   (`deploy.tf`) — for consumers whose pipeline applies, not just plans:
   Contributor on each of their `deploy_resource_groups`, and Reader on the
   subscription.
-- `github_actions_variable.state` (`actions.tf`) — `AZURE_CLIENT_ID`,
-  `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` set as Actions variables on
-  each `var.state_consumers` repo, so its workflow can `azure/login` with the
-  identity above. Every consumer must also be in `var.repos`.
+- `github_repository_environment.state` / `github_actions_environment_variable.state`
+  (`actions.tf`) — a `dev` environment on each `var.state_consumers` repo,
+  holding `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` as
+  environment variables. The identity above is federated to that environment
+  (`repo:<repo>:environment:dev`), so a job logs in to Azure only if it
+  declares `environment: dev` — CI and CD alike. Every consumer must also be
+  in `var.repos`.
 
   These are the only Azure-facing parts of this module; everything else
   above is GitHub. The account itself is created by
@@ -98,7 +101,7 @@ the ruleset's Admin `bypass_actors` exemption:
   initializes the whole configuration, backend included, in one step, so
   there's no way to plan just the GitHub side without Azure credentials once
   a real backend is configured. `make apply` sets all three on every state
-  consumer's repo, this one included (`actions.tf`) — no manual
+  consumer's `dev` environment, this one included (`actions.tf`) — no manual
   `gh variable set` needed.
 
 Never paste either credential into chat, commits, or these files —
@@ -151,8 +154,9 @@ and its ruleset.
 | [azurerm_role_assignment.deploy_reader](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.state_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_user_assigned_identity.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |
-| [github_actions_variable.state](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/actions_variable) | resource |
+| [github_actions_environment_variable.state](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/actions_environment_variable) | resource |
 | [github_repository.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository) | resource |
+| [github_repository_environment.state](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_environment) | resource |
 | [github_repository_ruleset.main](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset) | resource |
 | [github_repository_vulnerability_alerts.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_vulnerability_alerts) | resource |
 | [azurerm_resource_group.deploy](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
@@ -177,5 +181,5 @@ and its ruleset.
 | ---- | ----------- |
 | <a name="output_repository_urls"></a> [repository\_urls](#output\_repository\_urls) | HTML URL of every managed repository, keyed by name. |
 | <a name="output_state_backend_config"></a> [state\_backend\_config](#output\_state\_backend\_config) | Per consumer: the azurerm backend block values for its own backend.tf. |
-| <a name="output_state_github_secrets"></a> [state\_github\_secrets](#output\_state\_github\_secrets) | Repository variables to set on each state consumer's repo. |
+| <a name="output_state_github_secrets"></a> [state\_github\_secrets](#output\_state\_github\_secrets) | Environment variables set on each state consumer's dev environment by actions.tf. |
 <!-- END_TF_DOCS -->
