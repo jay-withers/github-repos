@@ -82,10 +82,23 @@ locals {
 
   deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
 
+  # The default subject uses GitHub's immutable form,
+  # repo:<owner>@<owner id>/<repo>@<repo id>, which every consumer's token
+  # carries (`use_immutable_subject` in
+  # `gh api repos/<owner>/<repo>/actions/oidc/customization/sub`). The
+  # readable repo:<owner>/<repo> form never matches such a token, and Entra
+  # rejects the login with AADSTS700213.
   state_federated_credentials = merge([
     for key, c in var.state_consumers : {
       for name, subject in coalesce(c.federated_subjects, {
-        (local.state_environment) = "repo:${c.github_repo}:environment:${local.state_environment}"
+        (local.state_environment) = format(
+          "repo:%s@%s/%s@%s:environment:%s",
+          data.github_user.owner.login,
+          data.github_user.owner.id,
+          github_repository.this[split("/", c.github_repo)[1]].name,
+          github_repository.this[split("/", c.github_repo)[1]].repo_id,
+          local.state_environment,
+        )
         }) : "${key}-${name}" => {
         consumer = key
         subject  = subject

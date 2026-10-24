@@ -164,6 +164,7 @@ and its ruleset.
 | [azurerm_storage_account.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/storage_account) | data source |
 | [azurerm_storage_container.consumer](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/storage_container) | data source |
 | [azurerm_subscription.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/subscription) | data source |
+| [github_user.owner](https://registry.terraform.io/providers/integrations/github/latest/docs/data-sources/user) | data source |
 
 ## Inputs
 
