@@ -19,7 +19,8 @@ provider.
   that repo's GitHub Actions.
 - `terraform_data.private_vulnerability_reporting` (`repository.tf`) — turns on
   private vulnerability reporting for every repo through the REST API on
-  apply, since the provider can't manage it. Uses `GITHUB_TOKEN` (admin).
+  apply, since the provider can't manage it. Uses `gh api`, so it
+  authenticates like the provider: `GITHUB_TOKEN`, else the `gh` login (admin).
 - `azurerm_role_assignment.deploy` / `azurerm_role_assignment.deploy_reader`
   (`deploy.tf`) — for consumers whose pipeline applies, not just plans:
   Contributor on each of their `deploy_resource_groups`, and Reader on the
