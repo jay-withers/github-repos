@@ -96,11 +96,9 @@ repos = {
     topics                  = ["azure", "terraform", "python", "llm", "fintech"]
     generated_from_template = "template-repo-terraform-root"
     # Infrastructure, the Python package behind it and a React dashboard, all in
-    # one repo. Still runs its own Container Apps environment, Log Analytics and
-    # Application Insights rather than the shared ones in azure-container-apps -
-    # migrating it is deliberately deferred until the shared environment has
-    # proven itself, because a new environment means its workloads get recreated
-    # and the dashboard's custom domain re-bound.
+    # one repo. Dev runs on the shared Container Apps environment, Log Analytics
+    # and Application Insights in azure-container-apps; stg/prd would still
+    # create their own, but are planned only on paper and never applied.
     #
     # Its PostgreSQL Flexible Server is the only thing in the estate that bills
     # meaningfully while idle, at roughly GBP 13/month, and that SKU was forced
@@ -113,12 +111,9 @@ repos = {
     # the credential-free validate via terraform.yml.
     #
     # Terraform takes two contexts, not one. `terraform / Terraform` is the
-    # shared workflow's own gate and can only see the jobs inside it, and
-    # market-agent keeps its `plan` job locally - that repo is a single
-    # self-contained root module that plans cleanly, unlike the landing-zone
-    # repos terraform.yml was written for, where a plan against a
-    # not-yet-applied dependency fails for something that is not a defect.
-    # `terraform-plan` is the always-reporting gate over those plan legs.
+    # shared workflow's own gate and can only see the jobs inside it.
+    # `terraform-plan` is the always-reporting gate over the credentialled dev
+    # plan (terraform-deploy.yml, with the identity in state_consumers below).
     # Dropping either context silently stops guarding half of the Terraform CI.
     #
     # ci-container-build's two `build (...)` contexts are deliberately absent:
@@ -518,6 +513,16 @@ state_consumers = {
   "azure-support-agent" = {
     github_repo            = "jay-withers/azure-support-agent"
     deploy_resource_groups = ["rg-supportagent-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
+  }
+
+  # The dashboard's managed certificate lives on cae-platform-dev, which the
+  # join role can't write, so an apply that (re)creates it still runs locally.
+  "market-agent" = {
+    github_repo            = "jay-withers/market-agent"
+    deploy_resource_groups = ["rg-marketagent-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
