@@ -64,21 +64,18 @@ resource "github_repository_vulnerability_alerts" "this" {
 # The integrations/github provider has no resource or attribute for it (6.x
 # exposes only the security_and_analysis secret-scanning settings), so this
 # calls the REST endpoint on apply. PUT is idempotent, and terraform_data
-# re-runs it for a new repository, or a renamed one. It uses the same
-# GITHUB_TOKEN the provider reads, which needs admin on the repos. Turning
-# reporting off again is a manual `DELETE` on the same endpoint.
+# re-runs it for a new repository, or a renamed one. It goes through `gh api`
+# rather than curl so it authenticates exactly as the provider does:
+# GITHUB_TOKEN when set, otherwise the `gh auth login` session. A bare curl
+# with $GITHUB_TOKEN sent no token at all for anyone relying on the login,
+# and every call failed 401. Needs admin on the repos. Turning reporting off
+# again is a manual `DELETE` on the same endpoint.
 resource "terraform_data" "private_vulnerability_reporting" {
   for_each = github_repository.this
 
   triggers_replace = [each.value.full_name]
 
   provisioner "local-exec" {
-    command = <<-EOT
-      curl -fsS -X PUT \
-        -H "Authorization: Bearer $GITHUB_TOKEN" \
-        -H "Accept: application/vnd.github+json" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        "https://api.github.com/repos/${each.value.full_name}/private-vulnerability-reporting"
-    EOT
+    command = "gh api --silent --method PUT repos/${each.value.full_name}/private-vulnerability-reporting"
   }
 }
