@@ -17,6 +17,9 @@ provider.
   "shared" Terraform state storage account's consumer side: one
   container-scoped identity per entry in `var.state_consumers`, federated to
   that repo's GitHub Actions.
+- `terraform_data.private_vulnerability_reporting` (`repository.tf`) — turns on
+  private vulnerability reporting for every repo through the REST API on
+  apply, since the provider can't manage it. Uses `GITHUB_TOKEN` (admin).
 - `azurerm_role_assignment.deploy` / `azurerm_role_assignment.deploy_reader`
   (`deploy.tf`) — for consumers whose pipeline applies, not just plans:
   Contributor on each of their `deploy_resource_groups`, and Reader on the
@@ -144,6 +147,7 @@ and its ruleset.
 | ---- | ------- |
 | <a name="provider_azurerm"></a> [azurerm](#provider\_azurerm) | ~> 4.0 |
 | <a name="provider_github"></a> [github](#provider\_github) | ~> 6.0 |
+| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ## Modules
 
@@ -167,6 +171,7 @@ and its ruleset.
 | [github_repository_environment.state](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_environment) | resource |
 | [github_repository_ruleset.main](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_ruleset) | resource |
 | [github_repository_vulnerability_alerts.this](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/repository_vulnerability_alerts) | resource |
+| [terraform_data.private_vulnerability_reporting](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [azurerm_container_app_environment.join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/container_app_environment) | data source |
 | [azurerm_resource_group.deploy](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
 | [azurerm_resource_group.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) | data source |
