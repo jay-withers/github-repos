@@ -102,3 +102,7 @@ repos:
           - --hook-config=--path-to-file=README.md
           - --hook-config=--add-to-existing-file=true
           - --hook-config=--create-file-if-not-exist=true
+          # Provider versions from the constraints, not .terraform.lock.hcl:
+          # read from the lock, every lock refresh rewrote the README and
+          # Renovate's lock-file maintenance PRs failed this hook.
+          - --args=--lockfile=false
