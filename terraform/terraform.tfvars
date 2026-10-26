@@ -32,6 +32,9 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "terraform-root-aks" = {
@@ -60,6 +63,9 @@ repos = {
       { context = "changes" },
       { context = "validate" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "azure-container-apps" = {
@@ -85,6 +91,9 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   # ---------------------------------------------------------------------------
@@ -258,6 +267,7 @@ repos = {
     # confirms the literal reported strings, same caveat as career's.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
       { context = "container-build" },
@@ -280,10 +290,6 @@ repos = {
     # Public like every repo in this file, so it holds no tenant data or
     # secrets: credentials for the tenant it reads live in its Key Vault.
     #
-    # No code_scanning: with no application source of its own there is
-    # nothing for CodeQL to analyse, and the rule would block every PR
-    # waiting for results that never arrive.
-    #
     # Contexts below are provisional until real CI exists and `gh pr checks`
     # confirms the literal reported strings, same caveat as career's.
     required_status_checks = [
@@ -291,6 +297,9 @@ repos = {
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   # ---------------------------------------------------------------------------
@@ -315,6 +324,9 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "workflows" = {
@@ -333,6 +345,9 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
     ]
+    # Runs CodeQL (_self_codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "renovate" = {
@@ -350,6 +365,9 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "validate", integration_id = 15368 },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "dev-containers" = {
@@ -373,6 +391,9 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "ci-container-build" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "toolchain" = {
@@ -397,6 +418,9 @@ repos = {
       { context = "linux" },
       { context = "macos" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "factory" = {
@@ -412,6 +436,9 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "template-repo-base" = {
@@ -424,6 +451,9 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   "template-repo-terraform-root" = {
@@ -436,6 +466,9 @@ repos = {
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
     ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
   }
 
   # ---------------------------------------------------------------------------
