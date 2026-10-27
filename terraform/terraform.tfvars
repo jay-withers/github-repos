@@ -396,6 +396,35 @@ repos = {
     code_scanning = true
   }
 
+  "container-images" = {
+    description             = "Shared runtime base images - python-app and python-app-builder - published to ghcr.io for every Python app on the shared Container Apps environment to build FROM"
+    topics                  = ["docker", "ghcr", "python", "container-apps"]
+    generated_from_template = "template-repo-base"
+    # The runtime counterpart to dev-containers: what ships to Container Apps,
+    # not what you develop in. It exists because gym-log, finances, career,
+    # repo-agent and market-agent each carried the same Dockerfile and had
+    # drifted on the Python digest, the uv version and an OS CVE patch.
+    #
+    # python-app-builder is built FROM python-app in the same pipeline, never
+    # pinned separately: a venv is bound to the interpreter that built it, and
+    # builder and runtime drifting apart is the market-agent outage gym-log's
+    # Dockerfile describes. Images are linux/amd64 only, like Container Apps.
+    #
+    # A fix here reaches nothing until each app's Renovate digest PR merges and
+    # deploys - publishing a new base does not redeploy anyone.
+    #
+    # `ci-container-build` is the always-reporting gate over the path-filtered
+    # build legs, same shape and reasoning as dev-containers'. Provisional until
+    # real CI exists and `gh pr checks` confirms the literal strings.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "ci-container-build" },
+    ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
+  }
+
   "toolchain" = {
     description = "Bootstrap script that installs the Azure, Kubernetes and Terraform toolchain on a fresh WSL or macOS machine"
     topics      = ["bootstrap", "macos", "wsl", "azure"]
