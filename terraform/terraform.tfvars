@@ -276,32 +276,6 @@ repos = {
     code_scanning = true
   }
 
-  "azure-support-agent" = {
-    description             = "Self-hosted deployment of zmustafa/AzureSupportAgent, an AI-driven Azure operations workbench, on the shared Container Apps environment"
-    topics                  = ["azure", "container-apps", "llm", "sre"]
-    generated_from_template = "template-repo-terraform-root"
-    # A sixth tenant of azure-container-apps: its own resource group, Key
-    # Vault, identity and container app, reaching the shared environment by
-    # name. The application itself is upstream's (MIT-licensed, FastAPI +
-    # React) - this repo holds the Terraform and config that run it here, not
-    # a fork of its source, so upstream releases are picked up by bumping a
-    # pinned version rather than merging.
-    #
-    # Public like every repo in this file, so it holds no tenant data or
-    # secrets: credentials for the tenant it reads live in its Key Vault.
-    #
-    # Contexts below are provisional until real CI exists and `gh pr checks`
-    # confirms the literal reported strings, same caveat as career's.
-    required_status_checks = [
-      { context = "pre-commit / Pre-commit" },
-      { context = "terraform / Terraform" },
-      { context = "terraform-plan" },
-    ]
-    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
-    # high/critical alerts block merges.
-    code_scanning = true
-  }
-
   "observability" = {
     description             = "Grafana over the shared Log Analytics workspace: deploys, health, jobs and spend for every app on the shared Container Apps environment"
     topics                  = ["azure", "container-apps", "grafana", "observability"]
@@ -565,14 +539,6 @@ state_consumers = {
     github_repo            = "jay-withers/security-testing"
     send_events            = true
     deploy_resource_groups = ["rg-sectest-dev"]
-    join_container_app_environments = [
-      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
-    ]
-  }
-
-  "azure-support-agent" = {
-    github_repo            = "jay-withers/azure-support-agent"
-    deploy_resource_groups = ["rg-supportagent-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
