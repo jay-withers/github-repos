@@ -82,6 +82,8 @@ locals {
 
   deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
 
+  event_consumers = toset([for key, c in var.state_consumers : key if c.send_events])
+
   join_container_app_environments = merge([
     for key, c in var.state_consumers : {
       for env in c.join_container_app_environments : "${key}-${env.resource_group}-${env.name}" => {
@@ -126,6 +128,22 @@ locals {
         AZURE_CLIENT_ID       = azurerm_user_assigned_identity.state[key].client_id
         AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
         AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
+        } : "${key}-${name}" => {
+        consumer = key
+        name     = name
+        value    = value
+      }
+    }
+  ]...)
+
+  # Where a consumer with `send_events` posts its rows. Kept apart from the
+  # Azure login variables above so that a consumer without it never needs the
+  # platform's rule to exist at plan time.
+  events_github_variables = merge([
+    for key in local.event_consumers : {
+      for name, value in {
+        EVENTS_INGESTION_ENDPOINT = data.azurerm_monitor_data_collection_endpoint.events[0].logs_ingestion_endpoint
+        EVENTS_DCR_IMMUTABLE_ID   = data.azurerm_monitor_data_collection_rule.events[0].immutable_id
         } : "${key}-${name}" => {
         consumer = key
         name     = name

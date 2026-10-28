@@ -24,3 +24,15 @@ resource "github_actions_environment_variable" "state" {
   variable_name = each.value.name
   value         = each.value.value
 }
+
+# EVENTS_INGESTION_ENDPOINT and EVENTS_DCR_IMMUTABLE_ID for consumers with
+# `send_events`. container-apps-deploy.yml posts its Deployments_CL row only
+# when both are set, and skips with a notice otherwise.
+resource "github_actions_environment_variable" "events" {
+  for_each = local.events_github_variables
+
+  repository    = github_repository_environment.state[each.value.consumer].repository
+  environment   = github_repository_environment.state[each.value.consumer].environment
+  variable_name = each.value.name
+  value         = each.value.value
+}

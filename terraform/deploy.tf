@@ -56,3 +56,16 @@ resource "azurerm_role_assignment" "deploy_join" {
   principal_id       = azurerm_user_assigned_identity.state[each.value.consumer].principal_id
   principal_type     = "ServicePrincipal"
 }
+
+# Lets a consumer's deploy workflow and workloads write Deployments_CL and
+# OpsEvents_CL rows through the platform's events rule. Granted here, beside
+# the identity, because it is a role assignment and no pipeline identity may
+# create one - including azure-container-apps', which owns the rule.
+resource "azurerm_role_assignment" "events_publisher" {
+  for_each = local.event_consumers
+
+  scope                = data.azurerm_monitor_data_collection_rule.events[0].id
+  role_definition_name = "Monitoring Metrics Publisher"
+  principal_id         = azurerm_user_assigned_identity.state[each.key].principal_id
+  principal_type       = "ServicePrincipal"
+}

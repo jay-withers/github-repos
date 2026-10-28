@@ -45,3 +45,20 @@ data "azurerm_container_app_environment" "join" {
 data "github_user" "owner" {
   username = "jay-withers"
 }
+
+# The platform's events endpoint and rule (azure-container-apps), for
+# consumers with `send_events`. Looked up only when there is one, so a plan
+# without any never depends on the platform having been applied.
+data "azurerm_monitor_data_collection_endpoint" "events" {
+  count = length(local.event_consumers) > 0 ? 1 : 0
+
+  name                = var.events_ingestion.endpoint_name
+  resource_group_name = var.events_ingestion.resource_group
+}
+
+data "azurerm_monitor_data_collection_rule" "events" {
+  count = length(local.event_consumers) > 0 ? 1 : 0
+
+  name                = var.events_ingestion.rule_name
+  resource_group_name = var.events_ingestion.resource_group
+}

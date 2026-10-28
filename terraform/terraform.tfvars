@@ -302,6 +302,28 @@ repos = {
     code_scanning = true
   }
 
+  "observability" = {
+    description             = "Grafana over the shared Log Analytics workspace: deploys, health, jobs and spend for every app on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "grafana", "observability"]
+    generated_from_template = "template-repo-terraform-root"
+    # A seventh tenant of azure-container-apps: its own resource group, Key
+    # Vault, identity and a scale-to-zero Grafana container app, reaching the
+    # shared environment by name. Its state lives in the `grafana` database on
+    # the platform's shared Postgres server; dashboards and data sources are
+    # Terraform. Alerting stays in Azure Monitor, so nothing depends on
+    # Grafana being awake.
+    #
+    # Only the template's checks until real CI exists and `gh pr checks`
+    # confirms more; `terraform-plan` joins once it plans against Azure.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
+  }
+
   # ---------------------------------------------------------------------------
   # Shared tooling. Consumed by nearly every repo above, so a change here is a
   # change everywhere - which is the point of them existing.
@@ -505,6 +527,7 @@ state_consumers = {
 
   "repo-agent" = {
     github_repo            = "jay-withers/repo-agent"
+    send_events            = true
     deploy_resource_groups = ["rg-repoagent-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
@@ -513,6 +536,7 @@ state_consumers = {
 
   "gym-log" = {
     github_repo            = "jay-withers/gym-log"
+    send_events            = true
     deploy_resource_groups = ["rg-gymlog-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
@@ -521,6 +545,7 @@ state_consumers = {
 
   "finances" = {
     github_repo            = "jay-withers/finances"
+    send_events            = true
     deploy_resource_groups = ["rg-finances-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
@@ -529,6 +554,7 @@ state_consumers = {
 
   "career" = {
     github_repo            = "jay-withers/career"
+    send_events            = true
     deploy_resource_groups = ["rg-career-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
@@ -537,6 +563,7 @@ state_consumers = {
 
   "security-testing" = {
     github_repo            = "jay-withers/security-testing"
+    send_events            = true
     deploy_resource_groups = ["rg-sectest-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
@@ -551,10 +578,18 @@ state_consumers = {
     ]
   }
 
+  # State only for now: its resource group does not exist until its first
+  # local apply, and deploy_resource_groups looks the group up. Add
+  # rg-observability-dev and the environment join after that apply.
+  "observability" = {
+    github_repo = "jay-withers/observability"
+  }
+
   # The dashboard's managed certificate lives on cae-platform-dev, which the
   # join role can't write, so an apply that (re)creates it still runs locally.
   "market-agent" = {
     github_repo            = "jay-withers/market-agent"
+    send_events            = true
     deploy_resource_groups = ["rg-marketagent-dev"]
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
