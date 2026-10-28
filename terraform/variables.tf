@@ -27,6 +27,12 @@ variable "location" {
   default     = "westeurope"
 }
 
+variable "deploy_location" {
+  description = "Azure region for the resource groups this repo creates for consumers (`create_resource_groups`). Must be the shared Container Apps environment's region: a container app may sit in a different resource group from its environment, but not a different region."
+  type        = string
+  default     = "northeurope"
+}
+
 variable "resource_group_name" {
   description = "The shared state resource group. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $ResourceGroupName. Changing this means changing the script and re-running it first."
   type        = string
@@ -56,8 +62,18 @@ variable "state_consumers" {
     `deploy_resource_groups` lists the resource groups the consumer's
     pipeline may apply into: Contributor on each, plus Reader on the
     subscription so plans can resolve providers and other repos' resources
-    by data source. Empty (the default) keeps the identity state-only. Each
-    group must already exist - create it with a local apply first.
+    by data source. Empty (the default) keeps the identity state-only.
+
+    `create_resource_groups` says who owns those groups. False (the default,
+    for now) looks each one up: the consumer created it with a local first
+    apply. True creates each one here, in var.deploy_location, and also
+    grants Role Based Access Control Administrator on it, conditioned so the
+    pipeline can assign any role except Owner, User Access Administrator and
+    RBAC Administrator. The consumer's pipeline can then apply its own role
+    assignments, and a new repo needs no local first apply. A consumer that
+    created its group itself moves over by an `import` block here, then a
+    `removed { lifecycle { destroy = false } }` block in its own repo - in
+    that order, so the group is never unmanaged.
 
     `join_container_app_environments` lists Container Apps environments in
     other repos' resource groups that the consumer's apps and jobs run on.
@@ -78,6 +94,7 @@ variable "state_consumers" {
     github_repo            = string
     federated_subjects     = optional(map(string))
     deploy_resource_groups = optional(list(string), [])
+    create_resource_groups = optional(bool, false)
     join_container_app_environments = optional(list(object({
       resource_group = string
       name           = string

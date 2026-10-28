@@ -544,13 +544,15 @@ state_consumers = {
     ]
   }
 
-  # Its resource group and workspace role assignment came from a first local
-  # apply; deploy_resource_groups looks the group up, so it could only be
-  # added after that.
+  # The first consumer whose resource group is created here
+  # (create_resource_groups), imported from the group its own first local
+  # apply made - see imports.tf. Its workspace role assignment is outside the
+  # group, so RBAC Administrator doesn't cover it; it stays as applied.
   "observability" = {
     github_repo            = "jay-withers/observability"
     send_events            = true
     deploy_resource_groups = ["rg-observability-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
