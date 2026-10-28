@@ -65,6 +65,13 @@ variable "state_consumers" {
     needs `Microsoft.App/managedEnvironments/join/action` on its environment,
     which Contributor on the consumer's own resource group doesn't cover.
     Each entry gets the narrow custom role in deploy.tf on that environment.
+
+    `send_events` lets the consumer's pipeline and workloads write rows to the
+    platform's Deployments_CL and OpsEvents_CL tables: Monitoring Metrics
+    Publisher on the events data collection rule, plus
+    EVENTS_INGESTION_ENDPOINT and EVENTS_DCR_IMMUTABLE_ID on its environment,
+    which jay-withers/workflows' container-apps-deploy.yml reads. The rule must
+    already exist - azure-container-apps creates it.
   DESCRIPTION
 
   type = map(object({
@@ -75,7 +82,22 @@ variable "state_consumers" {
       resource_group = string
       name           = string
     })), [])
+    send_events = optional(bool, false)
   }))
 
   default = {}
+}
+
+variable "events_ingestion" {
+  description = "The platform's events data collection endpoint and rule (azure-container-apps' main.events.tf), looked up by name for consumers with `send_events`. Only read when at least one consumer sends events."
+  type = object({
+    resource_group = string
+    endpoint_name  = string
+    rule_name      = string
+  })
+  default = {
+    resource_group = "rg-platform-dev"
+    endpoint_name  = "dce-platform-dev"
+    rule_name      = "dcr-platform-events-dev"
+  }
 }
