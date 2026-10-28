@@ -544,11 +544,16 @@ state_consumers = {
     ]
   }
 
-  # State only for now: its resource group does not exist until its first
-  # local apply, and deploy_resource_groups looks the group up. Add
-  # rg-observability-dev and the environment join after that apply.
+  # Its resource group and workspace role assignment came from a first local
+  # apply; deploy_resource_groups looks the group up, so it could only be
+  # added after that.
   "observability" = {
-    github_repo = "jay-withers/observability"
+    github_repo            = "jay-withers/observability"
+    send_events            = true
+    deploy_resource_groups = ["rg-observability-dev"]
+    join_container_app_environments = [
+      { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
+    ]
   }
 
   # The dashboard's managed certificate lives on cae-platform-dev, which the
