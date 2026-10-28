@@ -76,9 +76,53 @@ locals {
       for rg in c.deploy_resource_groups : "${key}-${rg}" => {
         consumer       = key
         resource_group = rg
+        create         = c.create_resource_groups
       }
     }
   ]...)
+
+  # Split by who owns the group (`create_resource_groups`), then joined back
+  # into one id per entry so the grants in deploy.tf don't care which.
+  created_resource_groups   = { for k, v in local.deploy_resource_groups : k => v if v.create }
+  looked_up_resource_groups = { for k, v in local.deploy_resource_groups : k => v if !v.create }
+
+  deploy_resource_group_ids = merge(
+    { for k, _ in local.created_resource_groups : k => azurerm_resource_group.deploy[k].id },
+    { for k, _ in local.looked_up_resource_groups : k => data.azurerm_resource_group.deploy[k].id },
+  )
+
+  # Microsoft's "Allow most roles, but don't allow others to assign roles"
+  # example, verbatim apart from whitespace: any role may be assigned or
+  # removed except Owner, RBAC Administrator and User Access Administrator, in
+  # that GUID order (built-in role IDs, the same in every tenant). Both halves
+  # are needed: `write` is checked against the request, `delete` against the
+  # existing assignment, so neither granting nor removing an admin role works.
+  # Microsoft's caveat: a custom role carrying roleAssignments/write would get
+  # through. The pipeline can't create one (Contributor excludes
+  # Microsoft.Authorization/*/Write), and this repo's only custom role
+  # (deploy.tf) carries read and join.
+  privileged_role_ids  = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635, f58310d9-a9f6-439a-9e8d-f62e7b41a168, 18d7d88d-d35e-4fb5-a5c3-7773c20a72d9"
+  rbac_admin_condition = <<-EOT
+    (
+     (
+      !(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})
+     )
+     OR
+     (
+      @Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAllValues:GuidNotEquals {${local.privileged_role_ids}}
+     )
+    )
+    AND
+    (
+     (
+      !(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})
+     )
+     OR
+     (
+      @Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAllValues:GuidNotEquals {${local.privileged_role_ids}}
+     )
+    )
+  EOT
 
   deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
 

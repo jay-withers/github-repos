@@ -2,17 +2,57 @@
 # each resource group it owns, and Reader on the subscription. Reader is what
 # a plan needs to check resource provider registration and to resolve other
 # repos' resources by data source (a tenant looking up the shared Container
-# Apps environment, say). Contributor cannot create role assignments, so a
-# configuration that grants roles still needs a local apply for those.
+# Apps environment, say). Contributor cannot create role assignments: with
+# `create_resource_groups` the conditioned RBAC Administrator below covers
+# those inside the group; without it they still need a local apply.
 #
 # principal_type is set explicitly for the same reason as state.tf.
 resource "azurerm_role_assignment" "deploy" {
   for_each = local.deploy_resource_groups
 
-  scope                = data.azurerm_resource_group.deploy[each.key].id
+  scope                = local.deploy_resource_group_ids[each.key]
   role_definition_name = "Contributor"
   principal_id         = azurerm_user_assigned_identity.state[each.value.consumer].principal_id
   principal_type       = "ServicePrincipal"
+}
+
+# Consumer resource groups owned here (`create_resource_groups`), so a repo's
+# pipeline can apply from its very first run. Same tags as the groups the
+# repos used to create, so importing one shows no diff.
+#
+# prevent_destroy because deleting a group deletes every app, vault and
+# storage account in it: dropping a consumer, or turning its
+# create_resource_groups off, fails the plan until this is lifted or the
+# group is moved out of state on purpose.
+resource "azurerm_resource_group" "deploy" {
+  for_each = local.created_resource_groups
+
+  name     = each.value.resource_group
+  location = var.deploy_location
+  tags = {
+    environment = local.state_environment
+    managed-by  = "terraform"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Role assignments inside the consumer's own group (its Key Vault, its storage
+# containers) from its pipeline, so a change that adds one applies in CD
+# rather than locally. Conditioned so the pipeline can grant any role but the
+# three that grant roles: see local.rbac_admin_condition. Only for groups
+# owned here; a looked-up group's repo still applies role assignments locally.
+resource "azurerm_role_assignment" "deploy_rbac_admin" {
+  for_each = local.created_resource_groups
+
+  scope                = azurerm_resource_group.deploy[each.key].id
+  role_definition_name = "Role Based Access Control Administrator"
+  principal_id         = azurerm_user_assigned_identity.state[each.value.consumer].principal_id
+  principal_type       = "ServicePrincipal"
+  condition_version    = "2.0"
+  condition            = local.rbac_admin_condition
 }
 
 resource "azurerm_role_assignment" "deploy_reader" {

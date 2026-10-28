@@ -23,11 +23,11 @@ data "azurerm_storage_container" "consumer" {
   storage_account_id = data.azurerm_storage_account.state.id
 }
 
-# Resource groups a consumer's pipeline applies into. Looked up, never
-# created: each repo owns its own resource group, and creates it with a local
-# apply before its pipeline takes over.
+# Resource groups a consumer's pipeline applies into, for consumers that
+# still create their own with a local first apply. Groups this repo creates
+# (`create_resource_groups`) are resources in deploy.tf instead.
 data "azurerm_resource_group" "deploy" {
-  for_each = local.deploy_resource_groups
+  for_each = local.looked_up_resource_groups
 
   name = each.value.resource_group
 }
