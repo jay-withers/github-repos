@@ -26,7 +26,7 @@ provider.
   Contributor on each of their `deploy_resource_groups`, and Reader on the
   subscription.
 - `azurerm_resource_group.deploy` / `azurerm_role_assignment.deploy_rbac_admin`
-  (`deploy.tf`, `imports.tf`) — for consumers with `create_resource_groups`:
+  (`deploy.tf`) — for consumers with `create_resource_groups`:
   their `deploy_resource_groups` are created here (with `prevent_destroy`)
   rather than by a local first apply in the repo, and their pipeline gets
   Role Based Access Control Administrator on each, conditioned so it can
@@ -34,8 +34,8 @@ provider.
   Administrator (Microsoft's "Allow most roles, but don't allow others to
   assign roles" example). That lets the repo's own pipeline apply the role
   assignments inside its group. A repo that created its group itself moves
-  over with an `import` block here first, then `removed { lifecycle {
-  destroy = false } }` in the repo.
+  over with an `import` block here first (an `imports.tf`, deleted once
+  applied), then `removed { lifecycle { destroy = false } }` in the repo.
 - `azurerm_role_definition.container_app_environment_join` /
   `azurerm_role_assignment.deploy_join` (`deploy.tf`) — a custom role holding
   only `Microsoft.App/managedEnvironments/read` and `join/action`, assigned to
