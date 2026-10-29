@@ -497,6 +497,9 @@ state_consumers = {
   # create_resource_groups the group itself is created here and the pipeline
   # also gets conditioned RBAC Administrator on it; each was imported from the
   # group the repo's own first apply made (imports.tf).
+  # Deliberately left looking its group up: RBAC Administrator on
+  # rg-platform-dev would reach Postgres, the workspace and the events rule
+  # every app shares, for a platform that rarely changes and applies locally.
   "azure-container-apps" = {
     github_repo            = "jay-withers/azure-container-apps"
     deploy_resource_groups = ["rg-platform-dev"]
@@ -570,6 +573,7 @@ state_consumers = {
     github_repo            = "jay-withers/market-agent"
     send_events            = true
     deploy_resource_groups = ["rg-marketagent-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
