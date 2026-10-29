@@ -495,8 +495,8 @@ state_consumers = {
   # Every consumer below applies dev from its own pipeline, so each also gets
   # Contributor on its dev resource group - see deploy.tf. With
   # create_resource_groups the group itself is created here and the pipeline
-  # also gets conditioned RBAC Administrator on it; each was imported from the
-  # group the repo's own first apply made (imports.tf).
+  # also gets conditioned RBAC Administrator on it; each existing group was
+  # imported from the one the repo's own first apply made.
   # Deliberately left looking its group up: RBAC Administrator on
   # rg-platform-dev would reach Postgres, the workspace and the events rule
   # every app shares, for a platform that rarely changes and applies locally.
