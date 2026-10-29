@@ -493,7 +493,10 @@ state_consumers = {
   }
 
   # Every consumer below applies dev from its own pipeline, so each also gets
-  # Contributor on its dev resource group - see deploy.tf.
+  # Contributor on its dev resource group - see deploy.tf. With
+  # create_resource_groups the group itself is created here and the pipeline
+  # also gets conditioned RBAC Administrator on it; each was imported from the
+  # group the repo's own first apply made (imports.tf).
   "azure-container-apps" = {
     github_repo            = "jay-withers/azure-container-apps"
     deploy_resource_groups = ["rg-platform-dev"]
@@ -503,6 +506,7 @@ state_consumers = {
     github_repo            = "jay-withers/repo-agent"
     send_events            = true
     deploy_resource_groups = ["rg-repoagent-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
@@ -512,6 +516,7 @@ state_consumers = {
     github_repo            = "jay-withers/gym-log"
     send_events            = true
     deploy_resource_groups = ["rg-gymlog-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
@@ -521,6 +526,7 @@ state_consumers = {
     github_repo            = "jay-withers/finances"
     send_events            = true
     deploy_resource_groups = ["rg-finances-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
@@ -530,6 +536,7 @@ state_consumers = {
     github_repo            = "jay-withers/career"
     send_events            = true
     deploy_resource_groups = ["rg-career-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
@@ -539,15 +546,14 @@ state_consumers = {
     github_repo            = "jay-withers/security-testing"
     send_events            = true
     deploy_resource_groups = ["rg-sectest-dev"]
+    create_resource_groups = true
     join_container_app_environments = [
       { resource_group = "rg-platform-dev", name = "cae-platform-dev" },
     ]
   }
 
-  # The first consumer whose resource group is created here
-  # (create_resource_groups), imported from the group its own first local
-  # apply made - see imports.tf. Its workspace role assignment is outside the
-  # group, so RBAC Administrator doesn't cover it; it stays as applied.
+  # Its workspace role assignment is outside its group, so RBAC Administrator
+  # doesn't cover it; it stays as applied locally.
   "observability" = {
     github_repo            = "jay-withers/observability"
     send_events            = true
