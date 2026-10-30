@@ -486,10 +486,12 @@ repos = {
 # account itself is created. To add a consumer: add its container name to
 # scripts/containers.json and re-run that script, then add an entry here.
 state_consumers = {
-  # State only: everything this repo manages is GitHub plus role assignments,
-  # which Contributor couldn't create anyway, so it applies locally.
+  # Pull request plans only, so Reader and no resource group. Applies run as a
+  # separate identity azure-landingzone creates, in this repo's main-only
+  # `apply` environment (actions.tf).
   "github-repos" = {
-    github_repo = "jay-withers/github-repos"
+    github_repo         = "jay-withers/github-repos"
+    subscription_reader = true
   }
 
   # Every consumer below applies dev from its own pipeline, so each also gets

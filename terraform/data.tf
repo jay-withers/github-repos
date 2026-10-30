@@ -62,3 +62,12 @@ data "azurerm_monitor_data_collection_rule" "events" {
   name                = var.events_ingestion.rule_name
   resource_group_name = var.events_ingestion.resource_group
 }
+
+# github-repos' own apply identity. Created and granted by azure-landingzone
+# (terraform/governance/main.github-repos.tf), never here: an apply of this
+# repo can't change the rights it applies with. Looked up only to set its
+# client ID on the apply environment.
+data "azurerm_user_assigned_identity" "apply" {
+  name                = local.apply_identity_name
+  resource_group_name = data.azurerm_resource_group.state.name
+}

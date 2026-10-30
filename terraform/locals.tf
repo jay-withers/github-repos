@@ -64,6 +64,14 @@ locals {
   # a single value, not a list.
   state_environment = "dev"
 
+  # This repo's own applies run in a second environment, restricted to main,
+  # as an identity azure-landingzone's governance component creates and
+  # grants (Contributor + User Access Administrator on the subscription). Pull
+  # request plans stay in state_environment as this repo's ordinary consumer
+  # identity, so branch code never holds those rights.
+  apply_environment   = "apply"
+  apply_identity_name = "uai-github-repos-apply-${local.state_environment}"
+
   # Federated credential names must be unique per identity and cannot contain
   # the ":" and "/" that appear in a subject, so the map key supplies the name
   # and the value supplies the subject. The key is never parsed back apart
@@ -124,7 +132,7 @@ locals {
     )
   EOT
 
-  deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
+  deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0 || c.subscription_reader])
 
   event_consumers = toset([for key, c in var.state_consumers : key if c.send_events])
 

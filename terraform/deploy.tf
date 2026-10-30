@@ -55,6 +55,7 @@ resource "azurerm_role_assignment" "deploy_rbac_admin" {
   condition            = local.rbac_admin_condition
 }
 
+# Also for `subscription_reader` consumers, which plan but don't apply.
 resource "azurerm_role_assignment" "deploy_reader" {
   for_each = local.deploy_consumers
 
