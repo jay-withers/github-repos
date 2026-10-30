@@ -103,16 +103,19 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   Commits since the last release, via the shared
   `jay-withers/workflows/.github/workflows/release.yml` reusable
   workflow (default bump: patch).
-- **ci-terraform** (`.github/workflows/ci-terraform.yml`): a `changes` job
-  (`dorny/paths-filter`) gates a `plan` job (`terraform plan` on `terraform/`)
-  so it runs only when a PR touches Terraform, behind a `ci-terraform` gate
-  job that always runs and is the check required in the ruleset — same shape
-  as `terraform-root-aks`'s `ci-terraform`, except it authenticates twice:
-  Azure OIDC for the `azurerm` provider (gated on the `AZURE_CLIENT_ID`
-  repository variable — see terraform/README.md's Auth section), and a PAT
-  (`TF_GITHUB_TOKEN` secret) for the `github` provider, since that provider
-  has no OIDC federation of its own. Plan-only: nothing applies in CI (see
-  Terraform below).
+- **ci-terraform** (`.github/workflows/ci-terraform.yml`): credential-free
+  validate (`terraform / Terraform`), then a real plan through the shared
+  `terraform-deploy.yml`, commented on the PR, behind an always-reporting
+  `terraform-plan` gate. The plan runs in the `dev` environment as the
+  low-privilege `uai-github-repos-deploy-dev` (subscription Reader) with a
+  read-only `TF_GITHUB_TOKEN` environment secret.
+- **cd-terraform** (`.github/workflows/cd-terraform.yml`): the estate's usual
+  flow. A merge touching Terraform plans and opens a `terraform-pending`
+  issue; **Actions → cd-terraform → Run workflow** applies that plan. Both run
+  in the `apply` environment, which only `main` can deploy to, as
+  `uai-github-repos-apply-dev` (Contributor + User Access Administrator on the
+  subscription, created and granted by azure-landingzone's `governance`, never
+  here) with an admin `TF_GITHUB_TOKEN` environment secret.
 
 ## Renovate
 
@@ -168,6 +171,6 @@ topics, and required status checks. State is **remote**, in the "shared"
 Terraform state storage account this module also manages access to (backend
 block in `versions.tf`) — durability comes from that account's blob
 versioning and soft-delete, not from any import/recovery mechanism in the
-module itself. The tradeoff is no CI apply — `ci-terraform` only plans; run
-`make apply` locally after merging a Terraform change. See
-`terraform/README.md` for the full reasoning.
+module itself. Changes apply through `cd-terraform` (see CI above); `make apply`
+locally is break-glass, for when an apply has broken the `apply` environment
+or its identity. See `terraform/README.md` for auth.

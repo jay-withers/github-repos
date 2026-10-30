@@ -312,10 +312,11 @@ repos = {
     # identities that let each repo plan against it (and, for those with
     # `deploy_resource_groups`, apply on merge).
     #
-    # It plans in CI but never applies: a change takes effect when someone runs
-    # `make apply` against remote state. Because that reads local tfvars, it can
-    # be run from a branch - which is how a required check that nothing reports
-    # gets unstuck without an admin bypass.
+    # Plans on PRs and merges, applies when cd-terraform is run by hand, as an
+    # identity azure-landingzone grants (see terraform/README.md's Auth).
+    # `make apply` locally still works as break-glass. Because it reads local
+    # tfvars, it can be run from a branch - which is how a required check that
+    # nothing reports gets unstuck without an admin bypass.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },

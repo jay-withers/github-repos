@@ -1,0 +1,46 @@
+name: cd-terraform
+
+# Plans on every merge to main that touches Terraform, through the shared
+# terraform-deploy.yml, and applies only when run by hand (Actions -> Run
+# workflow), like every other Terraform repo. A merge whose plan has changes
+# opens a `terraform-pending` issue; the manual run applies exactly the plan
+# it prints and closes the issue.
+#
+# Runs in the `apply` GitHub environment, which only main can deploy to. It
+# holds AZURE_CLIENT_ID for uai-github-repos-apply-dev (Contributor + User
+# Access Administrator on the subscription, created and granted by
+# azure-landingzone's governance component, not here) and the TF_GITHUB_TOKEN
+# secret, an admin PAT on every repo. `environment: dev` still names the
+# terraform-pending and deploy-failed issues.
+#
+# Break-glass: if an apply ever breaks the apply environment or its identity,
+# `make apply` locally still works.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".terraform-version"
+      - ".github/workflows/cd-terraform.yml"
+  # The manual apply: also re-runs a failed apply, or corrects drift.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    permissions:
+      id-token: write
+      contents: read
+      issues: write # terraform-pending and deploy-failed issues
+    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
+    with:
+      environment: dev
+      github-environment: apply
+      environment-files: false
+      apply: ${{ github.event_name == 'workflow_dispatch' }}
+    # Without inherit the called job sees no secrets at all, not even its own
+    # environment's TF_GITHUB_TOKEN. This repo has no repository secrets, so
+    # nothing else is passed.
+    secrets: inherit

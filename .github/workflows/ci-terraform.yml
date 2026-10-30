@@ -12,13 +12,55 @@ jobs:
   # The path filter and the always-reporting gate job both live in there — mark
   # "terraform / Terraform" as the required check in the ruleset, not the bare
   # job id, the same way ci-lint reports as "pre-commit / Pre-commit".
-  #
-  # There is no plan job. This configuration needs both a GitHub PAT with admin
-  # rights on every repo in var.repos and Azure credentials for its backend, and
-  # its backend.tf points at the shared state account — the shared workflow
-  # inits with -backend=false so none of that is needed to validate.
   terraform:
     permissions:
       contents: read
       pull-requests: read
-    uses: jay-withers/workflows/.github/workflows/terraform.yml@ad07194424d08c4f56947d5e410dbfabb130d3a1 # v1.14.6
+    uses: jay-withers/workflows/.github/workflows/terraform.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
+
+  # Plans against the real state through the shared terraform-deploy.yml,
+  # which posts the plan as a PR comment. cd-terraform calls the same workflow
+  # on main, so the PR runs the same init and plan the apply will.
+  #
+  # As the low-privilege identity: the job runs in the `dev` environment, as
+  # uai-github-repos-deploy-dev (Reader on the subscription, its own state
+  # container), with a read-only TF_GITHUB_TOKEN set on that environment.
+  # Applies run in `apply` instead, which only main can deploy to, so branch
+  # code never holds the rights an apply has.
+  #
+  # One deployment, so environment-files: false. The backend block in
+  # versions.tf and terraform.tfvars are complete on their own.
+  plan:
+    needs: terraform
+    if: needs.terraform.outputs.changed == 'true'
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write # the plan comment
+    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
+    with:
+      environment: dev
+      environment-files: false
+    # Without inherit the called job sees no secrets at all, not even its own
+    # environment's TF_GITHUB_TOKEN. This repo has no repository secrets, so
+    # nothing else is passed.
+    secrets: inherit
+
+  # Required status check for the plan job, which needs an always-reporting job
+  # of its own: "terraform / Terraform" covers only what runs inside the shared
+  # terraform.yml. Skipped counts as success, so a pull request touching no
+  # Terraform passes rather than hangs.
+  terraform-plan:
+    needs: plan
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify the plan job
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+        run: |
+          echo "plan=$PLAN_RESULT"
+          if [ "$PLAN_RESULT" = "failure" ]; then
+            echo "::error::The Terraform plan failed."
+            exit 1
+          fi

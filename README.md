@@ -21,8 +21,8 @@ this document covers the template baseline it's built on.
    make install
    ```
 
-4. Add the new repo to `terraform/terraform.tfvars`'s `var.repos` and run
-   `make apply` (see [Managing GitHub repos with
+4. Add the new repo to `terraform/terraform.tfvars`'s `var.repos`, merge, and
+   run `cd-terraform` from the Actions tab (see [Managing GitHub repos with
    Terraform](#managing-github-repos-with-terraform)) to pick up the
    settings that can't be templated as files — auto-merge, branch
    protection, required status checks. Until then, the repo just has
@@ -79,8 +79,11 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   semver tag and matching GitHub release from the Conventional Commits since the
   last release (default bump: patch), via
   `jay-withers/workflows/.github/workflows/release.yml`.
-- **`.github/workflows/ci-terraform.yml`** — plans `terraform/` on PRs that
-  touch it (no CI apply — see [`terraform/README.md`](terraform/README.md)).
+- **`.github/workflows/ci-terraform.yml`** — validates `terraform/` and, on
+  PRs that touch it, plans it and comments the plan.
+- **`.github/workflows/cd-terraform.yml`** — plans on merge and opens a
+  `terraform-pending` issue; running it by hand applies (see
+  [`terraform/README.md`](terraform/README.md)).
 
 Both `ci-lint`/`cd-tag` pin the reusable workflow by commit SHA with the tag
 as a comment. Add your own `ci-*` workflows (build, test, etc.) as you add
@@ -101,8 +104,8 @@ below). The `pre-commit` manager updates the frozen hook revisions in
 `terraform/` creates and manages every jay-withers GitHub repository —
 including this one — via the `integrations/github` provider, normalizing
 each onto the settings `terraform-root-aks` had configured by hand. State is
-local, gitignored, and never committed; applying is local-only for now (CI
-only plans). See [`terraform/README.md`](terraform/README.md) for what it
+remote; changes are planned on PR and on merge, and applied by running
+`cd-terraform` from the Actions tab. See [`terraform/README.md`](terraform/README.md) for what it
 manages, the state/auth tradeoffs, and the PAT it needs.
 
 ## Structure
@@ -114,7 +117,8 @@ manages, the state/auth tradeoffs, and the PAT it needs.
   workflows/
     ci-lint.yml        # lints all files on PRs to main (reusable workflow)
     cd-tag.yml         # auto-tags + releases on merge to main (semver, conventional commits)
-    ci-terraform.yml   # plans terraform/ on PRs that touch it (no CI apply)
+    ci-terraform.yml   # validates and plans terraform/ on PRs
+    cd-terraform.yml   # plans on merge; applies when run by hand
 .editorconfig          # baseline editor settings (aligned with pre-commit hooks)
 .gitattributes         # git-level LF normalization
 .pre-commit-config.yaml
