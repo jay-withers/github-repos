@@ -36,3 +36,41 @@ resource "github_actions_environment_variable" "events" {
   variable_name = each.value.name
   value         = each.value.value
 }
+
+# This repo's own apply environment. cd-terraform's push plans and manual
+# applies run here, as the apply identity; ci-terraform's pull request plans
+# run in `dev` as the ordinary consumer identity. Deployments only from main,
+# so a branch can neither log in as the apply identity (its federated
+# credential trusts this environment's subject alone) nor read the
+# TF_GITHUB_TOKEN secret set here, an admin PAT on every repo.
+#
+# That secret is set by hand (`gh secret set TF_GITHUB_TOKEN --env apply`),
+# never here: a value Terraform sets is stored in its state.
+resource "github_repository_environment" "apply" {
+  repository  = github_repository.this["github-repos"].name
+  environment = local.apply_environment
+
+  deployment_branch_policy {
+    protected_branches     = false
+    custom_branch_policies = true
+  }
+}
+
+resource "github_repository_environment_deployment_policy" "apply_main" {
+  repository     = github_repository_environment.apply.repository
+  environment    = github_repository_environment.apply.environment
+  branch_pattern = "main"
+}
+
+resource "github_actions_environment_variable" "apply" {
+  for_each = {
+    AZURE_CLIENT_ID       = data.azurerm_user_assigned_identity.apply.client_id
+    AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
+    AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
+  }
+
+  repository    = github_repository_environment.apply.repository
+  environment   = github_repository_environment.apply.environment
+  variable_name = each.key
+  value         = each.value
+}

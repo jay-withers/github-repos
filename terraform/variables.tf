@@ -82,6 +82,11 @@ variable "state_consumers" {
     which Contributor on the consumer's own resource group doesn't cover.
     Each entry gets the narrow custom role in deploy.tf on that environment.
 
+    `subscription_reader` grants only the subscription Reader, for a consumer
+    that plans against Azure but applies nothing there from its pipeline:
+    github-repos' own pull request plans, which refresh every identity and
+    role assignment here. Implied by `deploy_resource_groups`.
+
     `send_events` lets the consumer's pipeline and workloads write rows to the
     platform's Deployments_CL and OpsEvents_CL tables: Monitoring Metrics
     Publisher on the events data collection rule, plus
@@ -99,7 +104,8 @@ variable "state_consumers" {
       resource_group = string
       name           = string
     })), [])
-    send_events = optional(bool, false)
+    send_events         = optional(bool, false)
+    subscription_reader = optional(bool, false)
   }))
 
   default = {}
