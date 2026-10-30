@@ -40,3 +40,7 @@ jobs:
       github-environment: apply
       environment-files: false
       apply: ${{ github.event_name == 'workflow_dispatch' }}
+    # Without inherit the called job sees no secrets at all, not even its own
+    # environment's TF_GITHUB_TOKEN. This repo has no repository secrets, so
+    # nothing else is passed.
+    secrets: inherit

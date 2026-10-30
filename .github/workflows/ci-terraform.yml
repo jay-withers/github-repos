@@ -41,6 +41,10 @@ jobs:
     with:
       environment: dev
       environment-files: false
+    # Without inherit the called job sees no secrets at all, not even its own
+    # environment's TF_GITHUB_TOKEN. This repo has no repository secrets, so
+    # nothing else is passed.
+    secrets: inherit
 
   # Required status check for the plan job, which needs an always-reporting job
   # of its own: "terraform / Terraform" covers only what runs inside the shared
