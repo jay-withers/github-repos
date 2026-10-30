@@ -34,7 +34,7 @@ jobs:
       id-token: write
       contents: read
       issues: write # terraform-pending and deploy-failed issues
-    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@2ff8ce3373daa36e8dd4737d1c53af9ccd6cf5bc # v1.18.0
+    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
     with:
       environment: dev
       github-environment: apply

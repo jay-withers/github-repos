@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: jay-withers/workflows/.github/workflows/terraform.yml@2ff8ce3373daa36e8dd4737d1c53af9ccd6cf5bc # v1.18.0
+    uses: jay-withers/workflows/.github/workflows/terraform.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
 
   # Plans against the real state through the shared terraform-deploy.yml,
   # which posts the plan as a PR comment. cd-terraform calls the same workflow
@@ -37,7 +37,7 @@ jobs:
       id-token: write
       contents: read
       pull-requests: write # the plan comment
-    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@2ff8ce3373daa36e8dd4737d1c53af9ccd6cf5bc # v1.18.0
+    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@6427ce6e4c881f7884b92606ad77cbc2e367a3e8 # v1.18.1
     with:
       environment: dev
       environment-files: false
