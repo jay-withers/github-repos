@@ -83,9 +83,11 @@ data.
 `.terraform/` (the provider plugin cache) is gitignored, same as any local
 `terraform.tfstate*` left over from before the backend was wired in.
 
-Applying is **local-only** for now: `ci-terraform` only plans on PRs (see
-below), nothing runs `terraform apply` in CI. Run `make apply` yourself after
-merging a change to `terraform/`.
+Applying goes through CI like every other Terraform repo: `ci-terraform`
+plans each PR, `cd-terraform` plans each merge (opening a `terraform-pending`
+issue when there are changes), and **Actions → cd-terraform → Run workflow**
+applies. `make apply` locally is break-glass only: for an apply that broke the
+`apply` environment or its identity, or a required check nothing reports.
 
 ## Auth
 
@@ -99,11 +101,21 @@ the ruleset's Admin `bypass_actors` exemption:
 
 - **Local**: create a fine-grained PAT (or classic `repo`-scope PAT), export
   it as `GITHUB_TOKEN` in your shell before running any `make` target below.
-- **CI**: the same kind of PAT, stored as the repo secret `TF_GITHUB_TOKEN`
-  (not `GITHUB_TOKEN` — GitHub reserves that secret name), mapped to the
-  `GITHUB_TOKEN` env var for `ci-terraform`'s plan job. Read-only in effect
-  (CI never applies), but the ruleset/repository read endpoints still need an
-  authenticated admin to see full settings.
+- **CI**: a `TF_GITHUB_TOKEN` secret on each GitHub environment, never a
+  repository secret (any branch's run could read that). The shared
+  `terraform-deploy.yml` maps it to `GITHUB_TOKEN`.
+  - `apply` (`cd-terraform`, main only): a fine-grained PAT owned by
+    `jay-withers`, **All repositories**, with **Administration**,
+    **Environments** and **Variables** set to read and write (Metadata read
+    comes with them). That covers creating repos, settings, rulesets,
+    vulnerability alerts and environments.
+  - `dev` (`ci-terraform`'s PR plans): the same scopes, **read-only**.
+
+  A missing scope shows up as a 403 naming the endpoint, in the plan or apply.
+
+  Set each with `gh secret set TF_GITHUB_TOKEN --env <environment> -R
+  jay-withers/github-repos`, which prompts for the value. Never set them from
+  Terraform, which would keep the token in state.
 
 **Azure** — needed for `state.tf`/`identities.tf`/`data.tf`, and for
 `terraform init` itself (the backend block in `versions.tf` is already active):
@@ -114,16 +126,17 @@ the ruleset's Admin `bypass_actors` exemption:
   also all `make bootstrap` (`../scripts/bootstrap-state.ps1`) needs — it
   shells out to the CLI rather than the Az PowerShell modules — plus
   PowerShell 7+ to run it.
-- **CI**: OIDC, not a secret — `ci-terraform.yml`'s `plan` job is gated on
-  the `AZURE_CLIENT_ID` repository variable, exactly like
-  `terraform-root-aks`'s. **Until that variable (and `AZURE_TENANT_ID`/
-  `AZURE_SUBSCRIPTION_ID`) is set, the entire `plan` job is skipped — GitHub-only
-  changes included**, not just the Azure resources: `terraform init`
-  initializes the whole configuration, backend included, in one step, so
-  there's no way to plan just the GitHub side without Azure credentials once
-  a real backend is configured. `make apply` sets all three on every state
-  consumer's `dev` environment, this one included (`actions.tf`) — no manual
-  `gh variable set` needed.
+- **CI**: OIDC, no secret, with two identities.
+  - **Plans on PRs** run in `dev` as `uai-github-repos-deploy-dev`, this
+    repo's ordinary state consumer identity, with Reader on the subscription
+    (`subscription_reader`) and its own state container.
+  - **Plans on merge and applies** run in `apply`, which only `main` can
+    deploy to, as `uai-github-repos-apply-dev`: Contributor + User Access
+    Administrator on the subscription, Storage Blob Data Contributor on this
+    state container. azure-landingzone's `governance` component creates and
+    grants it (`main.github-repos.tf`), so no apply here can change its own
+    rights. `actions.tf` only looks it up to set the environment's
+    variables.
 
 Never paste either credential into chat, commits, or these files —
 `gitleaks` (pre-commit and CI) is only a backstop, not a substitute for care.
@@ -141,8 +154,8 @@ make apply     # terraform init + apply
 ## Adding a repository
 
 Add an entry to `var.repos` in `terraform.tfvars` and open a PR. `ci-terraform`
-plans it; after merging, run `make apply` locally to actually create the repo
-and its ruleset.
+plans it; after merging, run `cd-terraform` from the Actions tab to create the
+repo and its ruleset.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

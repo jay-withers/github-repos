@@ -28,7 +28,7 @@ validate: init ## terraform init + validate
 plan: init ## terraform init + plan
 	terraform -chdir=terraform plan
 
-apply: init ## terraform init + apply
+apply: init ## terraform init + apply (break-glass: CI applies via cd-terraform)
 	terraform -chdir=terraform apply
 
 destroy: init ## terraform init + destroy
