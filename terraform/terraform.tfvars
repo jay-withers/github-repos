@@ -320,6 +320,7 @@ repos = {
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
     ]
     # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
     # high/critical alerts block merges.
