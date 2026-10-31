@@ -54,6 +54,10 @@ resource "github_repository" "this" {
       # (e.g. terraform-root-aks, created from template-repo-terraform-root)
       # would show a permanent "remove template" diff.
       template,
+      # Undeclared (see local.repo_defaults), but GitHub still reports it on
+      # some older repos (dev-containers, git-demo) and not on the rest, so
+      # either way it would show as a diff on some repo.
+      security_and_analysis[0].secret_scanning_non_provider_patterns,
     ]
   }
 }

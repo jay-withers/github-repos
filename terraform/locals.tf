@@ -25,8 +25,9 @@ locals {
     #
     # Non-provider patterns (generic secrets: private keys, connection strings)
     # aren't declared at all. GitHub doesn't offer them on user-owned repos and
-    # leaves the field out of every read, so declaring any value, "disabled"
-    # included, is a diff on every plan (github-repos#106, #109). Add it back if
+    # leaves the field out of most reads, so declaring any value, "disabled"
+    # included, is a diff on every plan (github-repos#106, #109). repository.tf
+    # ignores it for the few repos that still report it. Add it back if
     # the account moves to an org. Validity checks and AI detection aren't here
     # either: the provider has no field for the first, and the second is paid.
     secret_scanning                 = "enabled"
