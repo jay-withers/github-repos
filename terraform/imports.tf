@@ -2,7 +2,6 @@
 # them. Delete this file in a later change, once it has applied.
 import {
   for_each = toset([
-    "github-repos",
     "azure-container-apps",
     "repo-agent",
     "gym-log",

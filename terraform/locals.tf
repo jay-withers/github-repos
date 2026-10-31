@@ -132,7 +132,7 @@ locals {
     )
   EOT
 
-  deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0 || c.subscription_reader])
+  deploy_consumers = toset([for key, c in var.state_consumers : key if length(c.deploy_resource_groups) > 0])
 
   event_consumers = toset([for key, c in var.state_consumers : key if c.send_events])
 

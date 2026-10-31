@@ -514,16 +514,9 @@ repos = {
 # account itself is created. To add a consumer, add an entry here: its
 # container is created alongside its identity.
 state_consumers = {
-  # Pull request plans only, so Reader and no resource group. Applies run as a
-  # separate identity azure-landingzone creates, in this repo's main-only
-  # `apply` environment (actions.tf). Sends events for its nightly drift check,
-  # which plans in `dev` as this identity.
-  "github-repos" = {
-    github_repo         = "jay-withers/github-repos"
-    subscription_reader = true
-    send_events         = true
-  }
-
+  # github-repos itself isn't one: it plans and applies only as
+  # azure-landingzone's apply identity, in its main-only `apply` environment,
+  # and its own container is state.tf's `self`.
   # Every consumer below applies dev from its own pipeline, so each also gets
   # Contributor on its dev resource group - see deploy.tf. With
   # create_resource_groups the group itself is created here and the pipeline

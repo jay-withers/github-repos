@@ -8,11 +8,11 @@ name: schedule-drift
 # a green run. To fix drift, run cd-terraform by hand, or change the
 # configuration to match.
 #
-# Runs in `dev` as the plan identity, like ci-terraform's pull request plans,
-# never in `apply`: a nightly check needs no write rights. secrets: inherit
-# hands the job dev's TF_GITHUB_TOKEN (see cd-terraform.yml for why). The row needs
-# EVENTS_INGESTION_ENDPOINT and EVENTS_DCR_IMMUTABLE_ID on `dev`, which
-# github-repos sets with `send_events`. Staggered minute so the estate's
+# Runs in `apply`, the repo's only environment, as cd-terraform's plans do: a
+# schedule runs on main, which that environment admits. drift: true never
+# applies. secrets: inherit hands the job apply's TF_GITHUB_TOKEN (see
+# cd-terraform.yml for why). The row needs EVENTS_INGESTION_ENDPOINT and
+# EVENTS_DCR_IMMUTABLE_ID on `apply`, which actions.tf sets. Staggered minute so the estate's
 # drift checks don't all queue at once.
 on:
   schedule:
@@ -31,6 +31,7 @@ jobs:
     uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@cf0cef323fa1178c47faf5bde016cc329572652e # v1.19.0
     with:
       environment: dev
+      github-environment: apply
       environment-files: false
       drift: true
     secrets: inherit
