@@ -54,10 +54,9 @@ variable "state_consumers" {
     entry here always gets a brand new identity, since none of these repos
     have one already.
 
-    The map key names the consumer and is also its container name - containers
-    are created by scripts/bootstrap-state.ps1, so add the key to that
-    script's containers.json (and re-run it) before adding it here, or the
-    container data source lookup fails.
+    The map key names the consumer and is also its container name, which
+    state.tf creates (prevent_destroy, so removing an entry leaves the
+    container and its state behind).
 
     `deploy_resource_groups` lists the resource groups the consumer's
     pipeline may apply into: Contributor on each, plus Reader on the
