@@ -91,8 +91,9 @@ variable "state_consumers" {
     platform's Deployments_CL and OpsEvents_CL tables: Monitoring Metrics
     Publisher on the events data collection rule, plus
     EVENTS_INGESTION_ENDPOINT and EVENTS_DCR_IMMUTABLE_ID on its environment,
-    which jay-withers/workflows' container-apps-deploy.yml reads. The rule must
-    already exist - azure-container-apps creates it.
+    which jay-withers/workflows' container-apps-deploy.yml and
+    terraform-deploy.yml's drift check read. The rule must already exist -
+    azure-container-apps creates it.
   DESCRIPTION
 
   type = map(object({

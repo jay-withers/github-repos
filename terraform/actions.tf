@@ -26,8 +26,9 @@ resource "github_actions_environment_variable" "state" {
 }
 
 # EVENTS_INGESTION_ENDPOINT and EVENTS_DCR_IMMUTABLE_ID for consumers with
-# `send_events`. container-apps-deploy.yml posts its Deployments_CL row only
-# when both are set, and skips with a notice otherwise.
+# `send_events`. container-apps-deploy.yml posts its Deployments_CL row, and
+# terraform-deploy.yml's drift check its OpsEvents_CL row, only when both are
+# set, and each skips with a notice otherwise.
 resource "github_actions_environment_variable" "events" {
   for_each = local.events_github_variables
 
