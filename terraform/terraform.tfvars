@@ -111,11 +111,13 @@ repos = {
     # in Azure, and authenticates to Cloudflare with a zone-scoped API token
     # held as an environment secret on its `dev` environment.
     #
-    # Only the template's checks until real CI exists and `gh pr checks`
-    # confirms more; `terraform-plan` joins once it plans against Cloudflare.
+    # Read literally off `gh pr checks` on cloudflare#2. `terraform-plan` is
+    # the always-reporting gate over the real plan against the zone, so a
+    # PR touching no Terraform still reports it.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
     ]
     # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
     # high/critical alerts block merges.
@@ -532,10 +534,12 @@ state_consumers = {
     send_events            = true
   }
 
-  # State only: no resource group, no Reader. It applies to Cloudflare, not
-  # Azure, so the identity needs nothing beyond its own state container.
+  # No resource group, no Reader: it applies to Cloudflare, not Azure. Its
+  # only Azure rights are its own state container and, for the nightly drift
+  # check's OpsEvents_CL row, the events rule.
   "cloudflare" = {
     github_repo = "jay-withers/cloudflare"
+    send_events = true
   }
 
   "repo-agent" = {
