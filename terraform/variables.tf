@@ -124,3 +124,26 @@ variable "events_ingestion" {
     rule_name      = "dcr-platform-events-dev"
   }
 }
+
+variable "operator" {
+  description = <<-DESCRIPTION
+    The person who runs this estate: Entra user object ID, user principal
+    name, and the address platform alerts go to. Set on every consumer that
+    applies from its own pipeline as the TF_VAR_* environment variables in
+    local.operator_github_variables, so no consumer commits them. No default,
+    so they aren't committed here either: CI reads TF_VAR_OPERATOR from this
+    repo's `dev` and `apply` environments, set by hand
+    (`gh variable set TF_VAR_OPERATOR --env <env>`), and a local plan needs
+    TF_VAR_operator exported.
+  DESCRIPTION
+  type = object({
+    object_id      = string
+    principal_name = string
+    email          = string
+  })
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$", var.operator.object_id))
+    error_message = "operator.object_id must be a lower-case Entra object ID GUID."
+  }
+}

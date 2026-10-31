@@ -203,4 +203,28 @@ locals {
       }
     }
   ]...)
+
+  # The operator's identifiers, under the variable names the consumers'
+  # roots declare, for every consumer that applies from its own pipeline.
+  # jay-withers/workflows' terraform-deploy.yml (v1.20.0+) exports TF_VAR_*
+  # variables to Terraform, which ignores any a root doesn't declare, so one
+  # set covers them all. Lists and objects are JSON, which Terraform accepts
+  # as HCL.
+  operator_github_variables = merge([
+    for key, c in var.state_consumers : {
+      for name, value in {
+        TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS = jsonencode([var.operator.object_id])
+        TF_VAR_ADMINISTRATOR_OBJECT_ID            = var.operator.object_id
+        TF_VAR_ALERT_EMAIL_ADDRESS                = var.operator.email
+        TF_VAR_POSTGRES_ENTRA_ADMINISTRATOR = jsonencode({
+          object_id      = var.operator.object_id
+          principal_name = var.operator.principal_name
+        })
+        } : "${key}-${name}" => {
+        consumer = key
+        name     = name
+        value    = value
+      }
+    } if length(c.deploy_resource_groups) > 0
+  ]...)
 }
