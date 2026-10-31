@@ -364,9 +364,6 @@ repos = {
     #
     # This is also why the contexts throughout this file are namespaced: a
     # reusable-workflow call reports as `<caller job id> / <reusable job name>`.
-    #
-    # Its README still calls the repo `template-pipelines`, from before the
-    # rename.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
     ]
@@ -382,7 +379,7 @@ repos = {
     # `github>jay-withers/renovate`: the old name resolves only through GitHub's
     # rename redirect, which disappears the moment anything is created at the old
     # path, and would break preset resolution in every repo at once with nothing
-    # to announce it. Its own README still documents the old name.
+    # to announce it.
     #
     # "validate" is reported by an app integration rather than a plain
     # Actions job - see gh api repos/jay-withers/renovate/rulesets.
