@@ -54,10 +54,9 @@ variable "state_consumers" {
     entry here always gets a brand new identity, since none of these repos
     have one already.
 
-    The map key names the consumer and is also its container name - containers
-    are created by scripts/bootstrap-state.ps1, so add the key to that
-    script's containers.json (and re-run it) before adding it here, or the
-    container data source lookup fails.
+    The map key names the consumer and is also its container name, which
+    state.tf creates (prevent_destroy, so removing an entry leaves the
+    container and its state behind).
 
     `deploy_resource_groups` lists the resource groups the consumer's
     pipeline may apply into: Contributor on each, plus Reader on the
@@ -123,5 +122,28 @@ variable "events_ingestion" {
     resource_group = "rg-platform-dev"
     endpoint_name  = "dce-platform-dev"
     rule_name      = "dcr-platform-events-dev"
+  }
+}
+
+variable "operator" {
+  description = <<-DESCRIPTION
+    The person who runs this estate: Entra user object ID, user principal
+    name, and the address platform alerts go to. Set on every consumer that
+    applies from its own pipeline as the TF_VAR_* environment variables in
+    local.operator_github_variables, so no consumer commits them. No default,
+    so they aren't committed here either: CI reads TF_VAR_OPERATOR from this
+    repo's `dev` and `apply` environments, set by hand
+    (`gh variable set TF_VAR_OPERATOR --env <env>`), and a local plan needs
+    TF_VAR_operator exported.
+  DESCRIPTION
+  type = object({
+    object_id      = string
+    principal_name = string
+    email          = string
+  })
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$", var.operator.object_id))
+    error_message = "operator.object_id must be a lower-case Entra object ID GUID."
   }
 }

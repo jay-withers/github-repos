@@ -96,6 +96,32 @@ repos = {
     code_scanning = true
   }
 
+  "cloudflare" = {
+    description             = "Terraform for the jaywithers.uk DNS records on Cloudflare: every app's custom-domain CNAME and asuid TXT, and mail records"
+    topics                  = ["cloudflare", "dns", "terraform"]
+    generated_from_template = "template-repo-terraform-root"
+    # Not Azure, but the front of it: each app's custom domain is a CNAME and
+    # an asuid TXT record here, and its managed certificate validates against
+    # them, so they must stay DNS only (never proxied). Owns the zone's DNS
+    # records only. The gym-log tunnel, its Access application and the zone's
+    # own settings stay manual in the dashboard, and so does the CNAME the
+    # tunnel writes for its own hostname.
+    #
+    # Its identity is state-only (state_consumers below): it touches nothing
+    # in Azure, and authenticates to Cloudflare with a zone-scoped API token
+    # held as an environment secret on its `dev` environment.
+    #
+    # Only the template's checks until real CI exists and `gh pr checks`
+    # confirms more; `terraform-plan` joins once it plans against Cloudflare.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+    # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
+    # high/critical alerts block merges.
+    code_scanning = true
+  }
+
   # ---------------------------------------------------------------------------
   # Workloads. Applications with their own Terraform, image and CD.
   # ---------------------------------------------------------------------------
@@ -485,8 +511,8 @@ repos = {
 
 # The "shared" Terraform state storage account this repo creates access to —
 # see state.tf/identities.tf, and scripts/bootstrap-state.ps1 for how the
-# account itself is created. To add a consumer: add its container name to
-# scripts/containers.json and re-run that script, then add an entry here.
+# account itself is created. To add a consumer, add an entry here: its
+# container is created alongside its identity.
 state_consumers = {
   # Pull request plans only, so Reader and no resource group. Applies run as a
   # separate identity azure-landingzone creates, in this repo's main-only
@@ -511,6 +537,12 @@ state_consumers = {
     github_repo            = "jay-withers/azure-container-apps"
     deploy_resource_groups = ["rg-platform-dev"]
     send_events            = true
+  }
+
+  # State only: no resource group, no Reader. It applies to Cloudflare, not
+  # Azure, so the identity needs nothing beyond its own state container.
+  "cloudflare" = {
+    github_repo = "jay-withers/cloudflare"
   }
 
   "repo-agent" = {

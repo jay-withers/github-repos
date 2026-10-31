@@ -38,6 +38,18 @@ resource "github_actions_environment_variable" "events" {
   value         = each.value.value
 }
 
+# The operator's object ID, UPN and alert address as TF_VAR_* variables on
+# each consumer that applies from its pipeline - see
+# local.operator_github_variables.
+resource "github_actions_environment_variable" "operator" {
+  for_each = local.operator_github_variables
+
+  repository    = github_repository_environment.state[each.value.consumer].repository
+  environment   = github_repository_environment.state[each.value.consumer].environment
+  variable_name = each.value.name
+  value         = each.value.value
+}
+
 # This repo's own apply environment. cd-terraform's push plans and manual
 # applies run here, as the apply identity; ci-terraform's pull request plans
 # run in `dev` as the ordinary consumer identity. Deployments only from main,

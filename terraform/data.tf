@@ -16,13 +16,6 @@ data "azurerm_storage_account" "state" {
   resource_group_name = data.azurerm_resource_group.state.name
 }
 
-data "azurerm_storage_container" "consumer" {
-  for_each = var.state_consumers
-
-  name               = each.key
-  storage_account_id = data.azurerm_storage_account.state.id
-}
-
 # Resource groups a consumer's pipeline applies into, for consumers that
 # still create their own with a local first apply. Groups this repo creates
 # (`create_resource_groups`) are resources in deploy.tf instead.
