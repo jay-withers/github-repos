@@ -34,6 +34,20 @@ resource "github_repository" "this" {
   squash_merge_commit_title   = local.repo_defaults.squash_merge_commit_title
   squash_merge_commit_message = local.repo_defaults.squash_merge_commit_message
 
+  # No advanced_security block: GitHub rejects setting it on a public repo,
+  # where it's always on.
+  security_and_analysis {
+    secret_scanning {
+      status = local.repo_defaults.secret_scanning
+    }
+    secret_scanning_push_protection {
+      status = local.repo_defaults.secret_scanning_push_protection
+    }
+    secret_scanning_non_provider_patterns {
+      status = local.repo_defaults.secret_scanning_non_provider_patterns
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       # GitHub reports which template (if any) a repo was created from
