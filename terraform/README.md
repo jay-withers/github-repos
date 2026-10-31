@@ -107,19 +107,16 @@ the ruleset's Admin `bypass_actors` exemption:
 
 - **Local**: create a fine-grained PAT (or classic `repo`-scope PAT), export
   it as `GITHUB_TOKEN` in your shell before running any `make` target below.
-- **CI**: a `TF_GITHUB_TOKEN` secret on each GitHub environment, never a
-  repository secret (any branch's run could read that). The shared
-  `terraform-deploy.yml` maps it to `GITHUB_TOKEN`.
-  - `apply` (`cd-terraform`, main only): a fine-grained PAT owned by
-    `jay-withers`, **All repositories**, with **Administration**,
-    **Environments** and **Variables** set to read and write (Metadata read
-    comes with them). That covers creating repos, settings, rulesets,
-    vulnerability alerts and environments.
-  - `dev` (`ci-terraform`'s PR plans): the same scopes, **read-only**.
+- **CI**: one `TF_GITHUB_TOKEN` secret, on the `apply` environment (main
+  only), never a repository secret (any branch's run could read that). The
+  shared `terraform-deploy.yml` maps it to `GITHUB_TOKEN`. It is a
+  fine-grained PAT owned by `jay-withers`, **All repositories**, with
+  **Administration**, **Environments** and **Variables** set to read and
+  write (Metadata read comes with them). That covers creating repos,
+  settings, rulesets, vulnerability alerts and environments. A missing scope
+  shows up as a 403 naming the endpoint, in the plan or apply.
 
-  A missing scope shows up as a 403 naming the endpoint, in the plan or apply.
-
-  Set each with `gh secret set TF_GITHUB_TOKEN --env <environment> -R
+  Set it with `gh secret set TF_GITHUB_TOKEN --env apply -R
   jay-withers/github-repos`, which prompts for the value. Never set them from
   Terraform, which would keep the token in state.
 
@@ -132,22 +129,23 @@ the ruleset's Admin `bypass_actors` exemption:
   also all `make bootstrap` (`../scripts/bootstrap-state.ps1`) needs — it
   shells out to the CLI rather than the Az PowerShell modules — plus
   PowerShell 7+ to run it.
-- **CI**: OIDC, no secret, with two identities.
-  - **Plans on PRs** run in `dev` as `uai-github-repos-deploy-dev`, this
-    repo's ordinary state consumer identity, with Reader on the subscription
-    (`subscription_reader`) and its own state container.
-  - **Plans on merge and applies** run in `apply`, which only `main` can
-    deploy to, as `uai-github-repos-apply-dev`: Contributor + User Access
-    Administrator on the subscription, Storage Blob Data Contributor on this
-    state container. azure-landingzone's `governance` component creates and
-    grants it (`main.github-repos.tf`), so no apply here can change its own
-    rights. `actions.tf` only looks it up to set the environment's
-    variables.
+- **CI**: OIDC, no secret, one identity in one environment. Plans on merge,
+  applies and the nightly drift check run in `apply`, which only `main` can
+  deploy to, as `uai-github-repos-apply-dev`: Contributor + User Access
+  Administrator on the subscription, Storage Blob Data Contributor on this
+  state container. azure-landingzone's `governance` component creates and
+  grants it (`main.github-repos.tf`), so no apply here can change what it
+  can change. `actions.tf` looks it up to set the environment's variables,
+  and `deploy.tf` grants it only Monitoring Metrics Publisher on the events
+  rule, for the drift row. **Pull requests get no credentialled plan**: the
+  only credentials that can read everything here are the apply ones, and
+  branch code never holds them. Read the real plan in the `terraform-pending`
+  issue a merge opens, before Run workflow.
 
 **The operator** — `var.operator` (object ID, UPN, alert address) has no
 default, so it isn't committed. CI reads it from a `TF_VAR_OPERATOR`
-variable on both `dev` and `apply`; set each with `gh variable set
-TF_VAR_OPERATOR --env <environment> -R jay-withers/github-repos --body
+variable on `apply`; set it with `gh variable set
+TF_VAR_OPERATOR --env apply -R jay-withers/github-repos --body
 '{"object_id":"…","principal_name":"…","email":"…"}'`. Locally, export the
 same JSON as `TF_VAR_operator`. `actions.tf` passes it on to every consumer
 that applies from its pipeline as `TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS`,
@@ -203,6 +201,7 @@ repo and its ruleset.
 | ---- | ---- |
 | [azurerm_federated_identity_credential.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/federated_identity_credential) | resource |
 | [azurerm_resource_group.deploy](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) | resource |
+| [azurerm_role_assignment.apply_events_publisher](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy_rbac_admin](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
@@ -211,6 +210,7 @@ repo and its ruleset.
 | [azurerm_role_assignment.state_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_definition.container_app_environment_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_definition) | resource |
 | [azurerm_storage_container.consumer](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) | resource |
+| [azurerm_storage_container.self](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) | resource |
 | [azurerm_user_assigned_identity.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |
 | [github_actions_environment_variable.apply](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/actions_environment_variable) | resource |
 | [github_actions_environment_variable.events](https://registry.terraform.io/providers/integrations/github/latest/docs/resources/actions_environment_variable) | resource |
@@ -240,10 +240,10 @@ repo and its ruleset.
 | <a name="input_deploy_location"></a> [deploy\_location](#input\_deploy\_location) | Azure region for the resource groups this repo creates for consumers (`create_resource_groups`). Must be the shared Container Apps environment's region: a container app may sit in a different resource group from its environment, but not a different region. | `string` | `"northeurope"` | no |
 | <a name="input_events_ingestion"></a> [events\_ingestion](#input\_events\_ingestion) | The platform's events data collection endpoint and rule (azure-container-apps' main.events.tf), looked up by name for consumers with `send_events`. Only read when at least one consumer sends events. | <pre>object({<br/>    resource_group = string<br/>    endpoint_name  = string<br/>    rule_name      = string<br/>  })</pre> | <pre>{<br/>  "endpoint_name": "dce-platform-dev",<br/>  "resource_group": "rg-platform-dev",<br/>  "rule_name": "dcr-platform-events-dev"<br/>}</pre> | no |
 | <a name="input_location"></a> [location](#input\_location) | Azure region for the identities this repo creates. See identities.tf. | `string` | `"westeurope"` | no |
-| <a name="input_operator"></a> [operator](#input\_operator) | The person who runs this estate: Entra user object ID, user principal<br/>name, and the address platform alerts go to. Set on every consumer that<br/>applies from its own pipeline as the TF\_VAR\_* environment variables in<br/>local.operator\_github\_variables, so no consumer commits them. No default,<br/>so they aren't committed here either: CI reads TF\_VAR\_OPERATOR from this<br/>repo's `dev` and `apply` environments, set by hand<br/>(`gh variable set TF_VAR_OPERATOR --env <env>`), and a local plan needs<br/>TF\_VAR\_operator exported. | <pre>object({<br/>    object_id      = string<br/>    principal_name = string<br/>    email          = string<br/>  })</pre> | n/a | yes |
+| <a name="input_operator"></a> [operator](#input\_operator) | The person who runs this estate: Entra user object ID, user principal<br/>name, and the address platform alerts go to. Set on every consumer that<br/>applies from its own pipeline as the TF\_VAR\_* environment variables in<br/>local.operator\_github\_variables, so no consumer commits them. No default,<br/>so they aren't committed here either: CI reads TF\_VAR\_OPERATOR from this<br/>repo's `apply` environment, set by hand<br/>(`gh variable set TF_VAR_OPERATOR --env apply`), and a local plan needs<br/>TF\_VAR\_operator exported. | <pre>object({<br/>    object_id      = string<br/>    principal_name = string<br/>    email          = string<br/>  })</pre> | n/a | yes |
 | <a name="input_repos"></a> [repos](#input\_repos) | GitHub repositories to manage, keyed by repo name. | <pre>map(object({<br/>    description = optional(string, "")<br/>    topics      = optional(list(string), [])<br/>    # Repo to generate this one from via GitHub's template mechanism.<br/>    # Create-time only - see the template lifecycle.ignore_changes note in<br/>    # repository.tf.<br/>    generated_from_template = optional(string)<br/>    required_status_checks = optional(list(object({<br/>      context        = string<br/>      integration_id = optional(number)<br/>    })), [])<br/>    # Block merges into main on new CodeQL alerts at local.code_scanning_thresholds.<br/>    # Only for repos that actually run CodeQL (ci-codeql.yml calling<br/>    # jay-withers/workflows' codeql.yml): the rule waits for CodeQL results on<br/>    # the pull request, so turning it on for a repo with no analysis would<br/>    # leave every pull request unmergeable.<br/>    code_scanning = optional(bool, false)<br/>  }))</pre> | n/a | yes |
 | <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name) | The shared state resource group. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $ResourceGroupName. Changing this means changing the script and re-running it first. | `string` | `"rg-tfstate-shared"` | no |
-| <a name="input_state_consumers"></a> [state\_consumers](#input\_state\_consumers) | One entry per consumer of the shared state storage account - repos that<br/>need state storage but aren't part of the azure-landingzone landing zone<br/>(that side has its own equivalent in azure-landingzone/terraform/bootstrap,<br/>which reuses landingzones' vended identities where one exists). Every<br/>entry here always gets a brand new identity, since none of these repos<br/>have one already.<br/><br/>The map key names the consumer and is also its container name, which<br/>state.tf creates (prevent\_destroy, so removing an entry leaves the<br/>container and its state behind).<br/><br/>`deploy_resource_groups` lists the resource groups the consumer's<br/>pipeline may apply into: Contributor on each, plus Reader on the<br/>subscription so plans can resolve providers and other repos' resources<br/>by data source. Empty (the default) keeps the identity state-only.<br/><br/>`create_resource_groups` says who owns those groups. False (the default,<br/>for now) looks each one up: the consumer created it with a local first<br/>apply. True creates each one here, in var.deploy\_location, and also<br/>grants Role Based Access Control Administrator on it, conditioned so the<br/>pipeline can assign any role except Owner, User Access Administrator and<br/>RBAC Administrator. The consumer's pipeline can then apply its own role<br/>assignments, and a new repo needs no local first apply. A consumer that<br/>created its group itself moves over by an `import` block here, then a<br/>`removed { lifecycle { destroy = false } }` block in its own repo - in<br/>that order, so the group is never unmanaged.<br/><br/>`join_container_app_environments` lists Container Apps environments in<br/>other repos' resource groups that the consumer's apps and jobs run on.<br/>Writing a container app or job - a Terraform apply or an image deploy -<br/>needs `Microsoft.App/managedEnvironments/join/action` on its environment,<br/>which Contributor on the consumer's own resource group doesn't cover.<br/>Each entry gets the narrow custom role in deploy.tf on that environment.<br/><br/>`subscription_reader` grants only the subscription Reader, for a consumer<br/>that plans against Azure but applies nothing there from its pipeline:<br/>github-repos' own pull request plans, which refresh every identity and<br/>role assignment here. Implied by `deploy_resource_groups`.<br/><br/>`send_events` lets the consumer's pipeline and workloads write rows to the<br/>platform's Deployments\_CL and OpsEvents\_CL tables: Monitoring Metrics<br/>Publisher on the events data collection rule, plus<br/>EVENTS\_INGESTION\_ENDPOINT and EVENTS\_DCR\_IMMUTABLE\_ID on its environment,<br/>which jay-withers/workflows' container-apps-deploy.yml and<br/>terraform-deploy.yml's drift check read. The rule must already exist -<br/>azure-container-apps creates it. | <pre>map(object({<br/>    github_repo            = string<br/>    federated_subjects     = optional(map(string))<br/>    deploy_resource_groups = optional(list(string), [])<br/>    create_resource_groups = optional(bool, false)<br/>    join_container_app_environments = optional(list(object({<br/>      resource_group = string<br/>      name           = string<br/>    })), [])<br/>    send_events         = optional(bool, false)<br/>    subscription_reader = optional(bool, false)<br/>  }))</pre> | `{}` | no |
+| <a name="input_state_consumers"></a> [state\_consumers](#input\_state\_consumers) | One entry per consumer of the shared state storage account - repos that<br/>need state storage but aren't part of the azure-landingzone landing zone<br/>(that side has its own equivalent in azure-landingzone/terraform/bootstrap,<br/>which reuses landingzones' vended identities where one exists). Every<br/>entry here always gets a brand new identity, since none of these repos<br/>have one already.<br/><br/>The map key names the consumer and is also its container name, which<br/>state.tf creates (prevent\_destroy, so removing an entry leaves the<br/>container and its state behind).<br/><br/>`deploy_resource_groups` lists the resource groups the consumer's<br/>pipeline may apply into: Contributor on each, plus Reader on the<br/>subscription so plans can resolve providers and other repos' resources<br/>by data source. Empty (the default) keeps the identity state-only.<br/><br/>`create_resource_groups` says who owns those groups. False (the default,<br/>for now) looks each one up: the consumer created it with a local first<br/>apply. True creates each one here, in var.deploy\_location, and also<br/>grants Role Based Access Control Administrator on it, conditioned so the<br/>pipeline can assign any role except Owner, User Access Administrator and<br/>RBAC Administrator. The consumer's pipeline can then apply its own role<br/>assignments, and a new repo needs no local first apply. A consumer that<br/>created its group itself moves over by an `import` block here, then a<br/>`removed { lifecycle { destroy = false } }` block in its own repo - in<br/>that order, so the group is never unmanaged.<br/><br/>`join_container_app_environments` lists Container Apps environments in<br/>other repos' resource groups that the consumer's apps and jobs run on.<br/>Writing a container app or job - a Terraform apply or an image deploy -<br/>needs `Microsoft.App/managedEnvironments/join/action` on its environment,<br/>which Contributor on the consumer's own resource group doesn't cover.<br/>Each entry gets the narrow custom role in deploy.tf on that environment.<br/><br/>`send_events` lets the consumer's pipeline and workloads write rows to the<br/>platform's Deployments\_CL and OpsEvents\_CL tables: Monitoring Metrics<br/>Publisher on the events data collection rule, plus<br/>EVENTS\_INGESTION\_ENDPOINT and EVENTS\_DCR\_IMMUTABLE\_ID on its environment,<br/>which jay-withers/workflows' container-apps-deploy.yml and<br/>terraform-deploy.yml's drift check read. The rule must already exist -<br/>azure-container-apps creates it. | <pre>map(object({<br/>    github_repo            = string<br/>    federated_subjects     = optional(map(string))<br/>    deploy_resource_groups = optional(list(string), [])<br/>    create_resource_groups = optional(bool, false)<br/>    join_container_app_environments = optional(list(object({<br/>      resource_group = string<br/>      name           = string<br/>    })), [])<br/>    send_events = optional(bool, false)<br/>  }))</pre> | `{}` | no |
 | <a name="input_storage_account_name"></a> [storage\_account\_name](#input\_storage\_account\_name) | The shared state storage account. Created by scripts/bootstrap-state.ps1, not Terraform - must match that script's hardcoded $StorageAccountName. Changing this means changing the script and re-running it first. | `string` | `"sttfsharedjw"` | no |
 
 ## Outputs

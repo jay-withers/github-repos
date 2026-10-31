@@ -18,49 +18,25 @@ jobs:
       pull-requests: read
     uses: jay-withers/workflows/.github/workflows/terraform.yml@e58b7edf840e0d24387064427d7c7e81338c6d40 # v1.20.0
 
-  # Plans against the real state through the shared terraform-deploy.yml,
-  # which posts the plan as a PR comment. cd-terraform calls the same workflow
-  # on main, so the PR runs the same init and plan the apply will.
+  # No credentialled plan on pull requests, deliberately. The only identity
+  # and token that can read everything this configuration touches are the
+  # apply ones, and those live in the main-only `apply` environment, so branch
+  # code never holds them. The real plan runs on merge (cd-terraform), lands in
+  # the terraform-pending issue, and is read there before Run workflow.
   #
-  # As the low-privilege identity: the job runs in the `dev` environment, as
-  # uai-github-repos-deploy-dev (Reader on the subscription, its own state
-  # container), with a read-only TF_GITHUB_TOKEN set on that environment.
-  # Applies run in `apply` instead, which only main can deploy to, so branch
-  # code never holds the rights an apply has.
-  #
-  # One deployment, so environment-files: false. The backend block in
-  # versions.tf and terraform.tfvars are complete on their own.
-  plan:
-    needs: terraform
-    if: needs.terraform.outputs.changed == 'true'
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write # the plan comment
-    uses: jay-withers/workflows/.github/workflows/terraform-deploy.yml@e58b7edf840e0d24387064427d7c7e81338c6d40 # v1.20.0
-    with:
-      environment: dev
-      environment-files: false
-    # Without inherit the called job sees no secrets at all, not even its own
-    # environment's TF_GITHUB_TOKEN. This repo has no repository secrets, so
-    # nothing else is passed.
-    secrets: inherit
-
-  # Required status check for the plan job, which needs an always-reporting job
-  # of its own: "terraform / Terraform" covers only what runs inside the shared
-  # terraform.yml. Skipped counts as success, so a pull request touching no
-  # Terraform passes rather than hangs.
+  # `terraform-plan` stays as a context because the ruleset requires it, the
+  # same name the other Terraform repos report. Here it gates the validate.
   terraform-plan:
-    needs: plan
+    needs: terraform
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - name: Verify the plan job
+      - name: Verify the validate job
         env:
-          PLAN_RESULT: ${{ needs.plan.result }}
+          RESULT: ${{ needs.terraform.result }}
         run: |
-          echo "plan=$PLAN_RESULT"
-          if [ "$PLAN_RESULT" = "failure" ]; then
-            echo "::error::The Terraform plan failed."
+          echo "terraform=$RESULT"
+          if [ "$RESULT" = "failure" ]; then
+            echo "::error::Terraform validate failed."
             exit 1
           fi

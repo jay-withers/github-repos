@@ -55,7 +55,6 @@ resource "azurerm_role_assignment" "deploy_rbac_admin" {
   condition            = local.rbac_admin_condition
 }
 
-# Also for `subscription_reader` consumers, which plan but don't apply.
 resource "azurerm_role_assignment" "deploy_reader" {
   for_each = local.deploy_consumers
 
@@ -108,5 +107,17 @@ resource "azurerm_role_assignment" "events_publisher" {
   scope                = data.azurerm_monitor_data_collection_rule.events[0].id
   role_definition_name = "Monitoring Metrics Publisher"
   principal_id         = azurerm_user_assigned_identity.state[each.key].principal_id
+  principal_type       = "ServicePrincipal"
+}
+
+# The same, for this repo's own apply identity, whose nightly drift check
+# (schedule-drift.yml) records an OpsEvents_CL row. The one grant this repo
+# makes to the identity it applies with, and deliberately so: sending rows to
+# one rule is a data-plane right over nothing else, whereas everything that
+# controls what it can change stays in azure-landingzone.
+resource "azurerm_role_assignment" "apply_events_publisher" {
+  scope                = data.azurerm_monitor_data_collection_rule.events[0].id
+  role_definition_name = "Monitoring Metrics Publisher"
+  principal_id         = data.azurerm_user_assigned_identity.apply.principal_id
   principal_type       = "ServicePrincipal"
 }

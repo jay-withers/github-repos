@@ -50,12 +50,12 @@ resource "github_actions_environment_variable" "operator" {
   value         = each.value.value
 }
 
-# This repo's own apply environment. cd-terraform's push plans and manual
-# applies run here, as the apply identity; ci-terraform's pull request plans
-# run in `dev` as the ordinary consumer identity. Deployments only from main,
-# so a branch can neither log in as the apply identity (its federated
-# credential trusts this environment's subject alone) nor read the
-# TF_GITHUB_TOKEN secret set here, an admin PAT on every repo.
+# This repo's own and only environment. cd-terraform's push plans and manual
+# applies, and the nightly drift check, run here as the apply identity; pull
+# requests get no credentialled plan. Deployments only from main, so a branch
+# can neither log in as the apply identity (its federated credential trusts
+# this environment's subject alone) nor read the TF_GITHUB_TOKEN secret set
+# here, an admin PAT on every repo.
 #
 # That secret is set by hand (`gh secret set TF_GITHUB_TOKEN --env apply`),
 # never here: a value Terraform sets is stored in its state.
@@ -75,11 +75,15 @@ resource "github_repository_environment_deployment_policy" "apply_main" {
   branch_pattern = "main"
 }
 
+# The Azure login, plus where the drift check posts its row. TF_VAR_OPERATOR
+# and the TF_GITHUB_TOKEN secret are set by hand (terraform/README.md).
 resource "github_actions_environment_variable" "apply" {
   for_each = {
-    AZURE_CLIENT_ID       = data.azurerm_user_assigned_identity.apply.client_id
-    AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
-    AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
+    AZURE_CLIENT_ID           = data.azurerm_user_assigned_identity.apply.client_id
+    AZURE_TENANT_ID           = data.azurerm_subscription.current.tenant_id
+    AZURE_SUBSCRIPTION_ID     = data.azurerm_subscription.current.subscription_id
+    EVENTS_INGESTION_ENDPOINT = data.azurerm_monitor_data_collection_endpoint.events[0].logs_ingestion_endpoint
+    EVENTS_DCR_IMMUTABLE_ID   = data.azurerm_monitor_data_collection_rule.events[0].immutable_id
   }
 
   repository    = github_repository_environment.apply.repository

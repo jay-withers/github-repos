@@ -81,11 +81,6 @@ variable "state_consumers" {
     which Contributor on the consumer's own resource group doesn't cover.
     Each entry gets the narrow custom role in deploy.tf on that environment.
 
-    `subscription_reader` grants only the subscription Reader, for a consumer
-    that plans against Azure but applies nothing there from its pipeline:
-    github-repos' own pull request plans, which refresh every identity and
-    role assignment here. Implied by `deploy_resource_groups`.
-
     `send_events` lets the consumer's pipeline and workloads write rows to the
     platform's Deployments_CL and OpsEvents_CL tables: Monitoring Metrics
     Publisher on the events data collection rule, plus
@@ -104,8 +99,7 @@ variable "state_consumers" {
       resource_group = string
       name           = string
     })), [])
-    send_events         = optional(bool, false)
-    subscription_reader = optional(bool, false)
+    send_events = optional(bool, false)
   }))
 
   default = {}
@@ -132,8 +126,8 @@ variable "operator" {
     applies from its own pipeline as the TF_VAR_* environment variables in
     local.operator_github_variables, so no consumer commits them. No default,
     so they aren't committed here either: CI reads TF_VAR_OPERATOR from this
-    repo's `dev` and `apply` environments, set by hand
-    (`gh variable set TF_VAR_OPERATOR --env <env>`), and a local plan needs
+    repo's `apply` environment, set by hand
+    (`gh variable set TF_VAR_OPERATOR --env apply`), and a local plan needs
     TF_VAR_operator exported.
   DESCRIPTION
   type = object({
