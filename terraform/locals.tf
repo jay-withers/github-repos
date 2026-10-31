@@ -22,15 +22,16 @@ locals {
     # Secret scanning, free on public repos. Scanning and push protection were
     # already on live but unmanaged; declaring them means a repo created here
     # can't start without them, and a plan shows anyone switching them off.
-    # Non-provider patterns add generic secrets (private keys, connection
-    # strings, HTTP auth headers) that have no partner pattern. If GitHub
-    # refuses it on user-owned repos at apply time (a 422), set this to
-    # "disabled": nothing else depends on it. Validity checks and AI detection
-    # aren't here: the provider has no field for the first, and the second
-    # needs a paid Copilot plan.
+    #
+    # Non-provider patterns (generic secrets: private keys, connection strings)
+    # stay "disabled" because GitHub doesn't offer them on user-owned repos: the
+    # 2026-10-31 apply sent "enabled", got a success, and every repo still read
+    # back "disabled". Declaring "enabled" would be a permanent diff. Revisit if
+    # the account moves to an org. Validity checks and AI detection aren't here:
+    # the provider has no field for the first, and the second is paid.
     secret_scanning                       = "enabled"
     secret_scanning_push_protection       = "enabled"
-    secret_scanning_non_provider_patterns = "enabled"
+    secret_scanning_non_provider_patterns = "disabled"
   }
 
   # "Protect main" ruleset shape, likewise taken from terraform-root-aks.
