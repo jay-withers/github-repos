@@ -511,8 +511,8 @@ repos = {
 
 # The "shared" Terraform state storage account this repo creates access to —
 # see state.tf/identities.tf, and scripts/bootstrap-state.ps1 for how the
-# account itself is created. To add a consumer: add its container name to
-# scripts/containers.json and re-run that script, then add an entry here.
+# account itself is created. To add a consumer, add an entry here: its
+# container is created alongside its identity.
 state_consumers = {
   # Pull request plans only, so Reader and no resource group. Applies run as a
   # separate identity azure-landingzone creates, in this repo's main-only
