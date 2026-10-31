@@ -18,6 +18,19 @@ locals {
     delete_branch_on_merge      = true
     squash_merge_commit_title   = "COMMIT_OR_PR_TITLE"
     squash_merge_commit_message = "COMMIT_MESSAGES"
+
+    # Secret scanning, free on public repos. Scanning and push protection were
+    # already on live but unmanaged; declaring them means a repo created here
+    # can't start without them, and a plan shows anyone switching them off.
+    # Non-provider patterns add generic secrets (private keys, connection
+    # strings, HTTP auth headers) that have no partner pattern. If GitHub
+    # refuses it on user-owned repos at apply time (a 422), set this to
+    # "disabled": nothing else depends on it. Validity checks and AI detection
+    # aren't here: the provider has no field for the first, and the second
+    # needs a paid Copilot plan.
+    secret_scanning                       = "enabled"
+    secret_scanning_push_protection       = "enabled"
+    secret_scanning_non_provider_patterns = "enabled"
   }
 
   # "Protect main" ruleset shape, likewise taken from terraform-root-aks.
