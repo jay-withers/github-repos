@@ -118,7 +118,9 @@ variable "pipeline_environments" {
     `send_events`. `main_only` restricts deployments to main, for an
     environment whose identity can apply. `send_events` grants Monitoring
     Metrics Publisher on the events rule and sets EVENTS_INGESTION_ENDPOINT
-    and EVENTS_DCR_IMMUTABLE_ID, as for a consumer.
+    and EVENTS_DCR_IMMUTABLE_ID, as for a consumer. `operator_variables` sets
+    the operator's TF_VAR_* variables, as for a consumer that applies from its
+    pipeline (local.operator_github_variables).
   DESCRIPTION
 
   type = map(object({
@@ -127,8 +129,9 @@ variable "pipeline_environments" {
       name           = string
       resource_group = string
     })
-    main_only   = optional(bool, false)
-    send_events = optional(bool, false)
+    main_only          = optional(bool, false)
+    send_events        = optional(bool, false)
+    operator_variables = optional(bool, false)
   }))
 
   default = {}

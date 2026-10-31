@@ -539,6 +539,9 @@ pipeline_environments = {
       resource_group = "rg-aks-dev"
     }
     send_events = true
+    # Its vault and Loki grants name the operator by object ID rather than
+    # following whoever applies.
+    operator_variables = true
   }
 }
 

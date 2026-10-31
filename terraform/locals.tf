@@ -165,7 +165,8 @@ locals {
         p.send_events ? {
           EVENTS_INGESTION_ENDPOINT = data.azurerm_monitor_data_collection_endpoint.events[0].logs_ingestion_endpoint
           EVENTS_DCR_IMMUTABLE_ID   = data.azurerm_monitor_data_collection_rule.events[0].immutable_id
-        } : {}
+        } : {},
+        p.operator_variables ? local.operator_variables : {}
         ) : "${key}-${name}" => {
         repo  = key
         name  = name
@@ -248,17 +249,19 @@ locals {
   # variables to Terraform, which ignores any a root doesn't declare, so one
   # set covers them all. Lists and objects are JSON, which Terraform accepts
   # as HCL.
+  operator_variables = {
+    TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS = jsonencode([var.operator.object_id])
+    TF_VAR_ADMINISTRATOR_OBJECT_ID            = var.operator.object_id
+    TF_VAR_ALERT_EMAIL_ADDRESS                = var.operator.email
+    TF_VAR_POSTGRES_ENTRA_ADMINISTRATOR = jsonencode({
+      object_id      = var.operator.object_id
+      principal_name = var.operator.principal_name
+    })
+  }
+
   operator_github_variables = merge([
     for key, c in var.state_consumers : {
-      for name, value in {
-        TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS = jsonencode([var.operator.object_id])
-        TF_VAR_ADMINISTRATOR_OBJECT_ID            = var.operator.object_id
-        TF_VAR_ALERT_EMAIL_ADDRESS                = var.operator.email
-        TF_VAR_POSTGRES_ENTRA_ADMINISTRATOR = jsonencode({
-          object_id      = var.operator.object_id
-          principal_name = var.operator.principal_name
-        })
-        } : "${key}-${name}" => {
+      for name, value in local.operator_variables : "${key}-${name}" => {
         consumer = key
         name     = name
         value    = value
