@@ -516,10 +516,12 @@ repos = {
 state_consumers = {
   # Pull request plans only, so Reader and no resource group. Applies run as a
   # separate identity azure-landingzone creates, in this repo's main-only
-  # `apply` environment (actions.tf).
+  # `apply` environment (actions.tf). Sends events for its nightly drift check,
+  # which plans in `dev` as this identity.
   "github-repos" = {
     github_repo         = "jay-withers/github-repos"
     subscription_reader = true
+    send_events         = true
   }
 
   # Every consumer below applies dev from its own pipeline, so each also gets
@@ -530,9 +532,11 @@ state_consumers = {
   # Deliberately left looking its group up: RBAC Administrator on
   # rg-platform-dev would reach Postgres, the workspace and the events rule
   # every app shares, for a platform that rarely changes and applies locally.
+  # Sends events for its nightly drift check.
   "azure-container-apps" = {
     github_repo            = "jay-withers/azure-container-apps"
     deploy_resource_groups = ["rg-platform-dev"]
+    send_events            = true
   }
 
   # State only: no resource group, no Reader. It applies to Cloudflare, not
