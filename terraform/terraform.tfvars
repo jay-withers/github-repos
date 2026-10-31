@@ -103,9 +103,7 @@ repos = {
     # Not Azure, but the front of it: each app's custom domain is a CNAME and
     # an asuid TXT record here, and its managed certificate validates against
     # them, so they must stay DNS only (never proxied). Owns the zone's DNS
-    # records only. The gym-log tunnel, its Access application and the zone's
-    # own settings stay manual in the dashboard, and so does the CNAME the
-    # tunnel writes for its own hostname.
+    # records only; the zone's own settings stay manual in the dashboard.
     #
     # Its identity is state-only (state_consumers below): it touches nothing
     # in Azure, and authenticates to Cloudflare with a zone-scoped API token
