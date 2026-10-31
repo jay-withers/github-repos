@@ -1,3 +1,23 @@
+# This repo's own state container: its backend (versions.tf). Not a consumer,
+# since this repo plans and applies only as azure-landingzone's apply identity,
+# which holds its own grant on this container. Moved out of the consumer map
+# when the `dev` environment and its identity went, so nothing touches it.
+resource "azurerm_storage_container" "self" {
+  #checkov:skip=CKV2_AZURE_21:Blob logging is an account setting, and the account is scripts/bootstrap-state.ps1's, not this module's.
+  name                  = "github-repos"
+  storage_account_id    = data.azurerm_storage_account.state.id
+  container_access_type = "private"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+moved {
+  from = azurerm_storage_container.consumer["github-repos"]
+  to   = azurerm_storage_container.self
+}
+
 # One container per consumer, created here rather than by
 # scripts/bootstrap-state.ps1, so adding a consumer is one tfvars entry. With
 # storage_account_id set, azurerm creates the container through the

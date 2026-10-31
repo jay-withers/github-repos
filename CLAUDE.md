@@ -104,18 +104,19 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   `jay-withers/workflows/.github/workflows/release.yml` reusable
   workflow (default bump: patch).
 - **ci-terraform** (`.github/workflows/ci-terraform.yml`): credential-free
-  validate (`terraform / Terraform`), then a real plan through the shared
-  `terraform-deploy.yml`, commented on the PR, behind an always-reporting
-  `terraform-plan` gate. The plan runs in the `dev` environment as the
-  low-privilege `uai-github-repos-deploy-dev` (subscription Reader) with a
-  read-only `TF_GITHUB_TOKEN` environment secret.
+  validate only (`terraform / Terraform`, and the `terraform-plan` gate the
+  ruleset requires). **No credentialled plan on PRs**, deliberately: the only
+  identity and token that can read everything here are the apply ones, kept
+  in the main-only `apply` environment. Read the real plan in the
+  `terraform-pending` issue a merge opens.
 - **cd-terraform** (`.github/workflows/cd-terraform.yml`): the estate's usual
   flow. A merge touching Terraform plans and opens a `terraform-pending`
   issue; **Actions → cd-terraform → Run workflow** applies that plan. Both run
   in the `apply` environment, which only `main` can deploy to, as
   `uai-github-repos-apply-dev` (Contributor + User Access Administrator on the
   subscription, created and granted by azure-landingzone's `governance`, never
-  here) with an admin `TF_GITHUB_TOKEN` environment secret.
+  here) with an admin `TF_GITHUB_TOKEN` environment secret, the repo's one
+  PAT. `apply` is the only environment; `schedule-drift` plans there nightly.
 
 ## Renovate
 

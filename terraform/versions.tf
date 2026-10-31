@@ -27,7 +27,7 @@ terraform {
 # Token comes from the GITHUB_TOKEN env var (the provider's default) - never
 # hardcode it here. Locally that's a personal PAT with admin rights on every
 # repo below; in CI it's the TF_GITHUB_TOKEN secret on the job's GitHub
-# environment (read-only on `dev`, admin on `apply`). See
+# environment, `apply`, an admin PAT. See
 # terraform/README.md for how to create and scope it.
 provider "github" {
   owner = "jay-withers"
