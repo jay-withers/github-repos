@@ -43,9 +43,6 @@ resource "github_repository" "this" {
     secret_scanning_push_protection {
       status = local.repo_defaults.secret_scanning_push_protection
     }
-    secret_scanning_non_provider_patterns {
-      status = local.repo_defaults.secret_scanning_non_provider_patterns
-    }
   }
 
   lifecycle {

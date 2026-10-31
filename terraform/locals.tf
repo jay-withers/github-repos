@@ -24,14 +24,13 @@ locals {
     # can't start without them, and a plan shows anyone switching them off.
     #
     # Non-provider patterns (generic secrets: private keys, connection strings)
-    # stay "disabled" because GitHub doesn't offer them on user-owned repos: the
-    # 2026-10-31 apply sent "enabled", got a success, and every repo still read
-    # back "disabled". Declaring "enabled" would be a permanent diff. Revisit if
-    # the account moves to an org. Validity checks and AI detection aren't here:
-    # the provider has no field for the first, and the second is paid.
-    secret_scanning                       = "enabled"
-    secret_scanning_push_protection       = "enabled"
-    secret_scanning_non_provider_patterns = "disabled"
+    # aren't declared at all. GitHub doesn't offer them on user-owned repos and
+    # leaves the field out of every read, so declaring any value, "disabled"
+    # included, is a diff on every plan (github-repos#106, #109). Add it back if
+    # the account moves to an org. Validity checks and AI detection aren't here
+    # either: the provider has no field for the first, and the second is paid.
+    secret_scanning                 = "enabled"
+    secret_scanning_push_protection = "enabled"
   }
 
   # "Protect main" ruleset shape, likewise taken from terraform-root-aks.
