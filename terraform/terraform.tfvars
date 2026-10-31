@@ -24,13 +24,14 @@ repos = {
     # groups and identities to the spokes. Both must be applied before any spoke
     # can deploy. Also the home of the `allowed-locations-dev` policy assignment
     # that confines everything else to westeurope/northeurope.
-    # `terraform / Terraform` comes from the shared workflow and `terraform-plan`
-    # from the credentialled plan job the repo keeps locally — the same half-shared
-    # split as market-agent and repo-agent.
+    # Plans on merge and applies when cd-terraform is run by hand, from the
+    # main-only `apply` environment in pipeline_environments below. Like
+    # github-repos, pull requests get no credentialled plan: the only identity
+    # that can read everything it manages is the apply one, which branch code
+    # never gets. Read the real plan in the `terraform-pending` issue.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
-      { context = "terraform-plan" },
     ]
     # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
     # high/critical alerts block merges.
@@ -506,6 +507,38 @@ repos = {
     # and no renovate.json on purpose, so it will show up in repo-agent's digest
     # as missing both - expected, not a defect, and the reason that agent reports
     # rather than enforces.
+  }
+}
+
+# Environments for repos that apply from their own pipeline with an identity
+# azure-landingzone creates, rather than one made here - see
+# var.pipeline_environments.
+pipeline_environments = {
+  # azure-landingzone's own apply identity (its bootstrap component's
+  # main.pipeline.tf): Contributor + User Access Administrator on the
+  # subscription, so main only. cd-terraform and the nightly drift check run
+  # here.
+  "azure-landingzone" = {
+    environment = "apply"
+    identity = {
+      name           = "uai-azure-landingzone-apply-dev"
+      resource_group = "rg-tfstate-dev"
+    }
+    main_only   = true
+    send_events = true
+  }
+
+  # The identity landingzones vends to the AKS spoke: Contributor and RBAC
+  # Administrator on its own resource group, plus targeted hub grants.
+  # Not main only, as for every consumer's `dev`; its federated credential for
+  # this environment is landingzones' `environment-dev`.
+  "terraform-root-aks" = {
+    environment = "dev"
+    identity = {
+      name           = "uai-aks-dev"
+      resource_group = "rg-aks-dev"
+    }
+    send_events = true
   }
 }
 

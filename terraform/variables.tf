@@ -105,6 +105,35 @@ variable "state_consumers" {
   default = {}
 }
 
+variable "pipeline_environments" {
+  description = <<-DESCRIPTION
+    GitHub environments for repos that apply from their own pipeline but
+    aren't `state_consumers`, because their identity and state live
+    elsewhere: azure-landingzone's own apply identity (its bootstrap
+    component) and the identities its landingzones component vends to
+    spokes. Keyed by repo name, which must also be in var.repos.
+
+    `identity` names the existing user-assigned identity, looked up by data
+    source to set AZURE_CLIENT_ID; nothing here creates or grants it beyond
+    `send_events`. `main_only` restricts deployments to main, for an
+    environment whose identity can apply. `send_events` grants Monitoring
+    Metrics Publisher on the events rule and sets EVENTS_INGESTION_ENDPOINT
+    and EVENTS_DCR_IMMUTABLE_ID, as for a consumer.
+  DESCRIPTION
+
+  type = map(object({
+    environment = string
+    identity = object({
+      name           = string
+      resource_group = string
+    })
+    main_only   = optional(bool, false)
+    send_events = optional(bool, false)
+  }))
+
+  default = {}
+}
+
 variable "events_ingestion" {
   description = "The platform's events data collection endpoint and rule (azure-container-apps' main.events.tf), looked up by name for consumers with `send_events`. Only read when at least one consumer sends events."
   type = object({

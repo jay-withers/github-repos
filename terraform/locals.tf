@@ -150,6 +150,30 @@ locals {
 
   event_consumers = toset([for key, c in var.state_consumers : key if c.send_events])
 
+  pipeline_event_repos = toset([for key, p in var.pipeline_environments : key if p.send_events])
+
+  # One entry per pipeline environment and variable, keyed
+  # "<repo>-<variable>", the same shape as state_github_variables.
+  pipeline_github_variables = merge([
+    for key, p in var.pipeline_environments : {
+      for name, value in merge(
+        {
+          AZURE_CLIENT_ID       = data.azurerm_user_assigned_identity.pipeline[key].client_id
+          AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
+          AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
+        },
+        p.send_events ? {
+          EVENTS_INGESTION_ENDPOINT = data.azurerm_monitor_data_collection_endpoint.events[0].logs_ingestion_endpoint
+          EVENTS_DCR_IMMUTABLE_ID   = data.azurerm_monitor_data_collection_rule.events[0].immutable_id
+        } : {}
+        ) : "${key}-${name}" => {
+        repo  = key
+        name  = name
+        value = value
+      }
+    }
+  ]...)
+
   join_container_app_environments = merge([
     for key, c in var.state_consumers : {
       for env in c.join_container_app_environments : "${key}-${env.resource_group}-${env.name}" => {

@@ -43,14 +43,14 @@ data "github_user" "owner" {
 # consumers with `send_events`. Looked up only when there is one, so a plan
 # without any never depends on the platform having been applied.
 data "azurerm_monitor_data_collection_endpoint" "events" {
-  count = length(local.event_consumers) > 0 ? 1 : 0
+  count = length(local.event_consumers) + length(local.pipeline_event_repos) > 0 ? 1 : 0
 
   name                = var.events_ingestion.endpoint_name
   resource_group_name = var.events_ingestion.resource_group
 }
 
 data "azurerm_monitor_data_collection_rule" "events" {
-  count = length(local.event_consumers) > 0 ? 1 : 0
+  count = length(local.event_consumers) + length(local.pipeline_event_repos) > 0 ? 1 : 0
 
   name                = var.events_ingestion.rule_name
   resource_group_name = var.events_ingestion.resource_group
@@ -63,4 +63,15 @@ data "azurerm_monitor_data_collection_rule" "events" {
 data "azurerm_user_assigned_identity" "apply" {
   name                = local.apply_identity_name
   resource_group_name = data.azurerm_resource_group.state.name
+}
+
+# The identities var.pipeline_environments' repos log in as, created by
+# azure-landingzone (bootstrap for its own, landingzones for spokes). Looked
+# up only to set their client IDs and, with `send_events`, grant the events
+# rule.
+data "azurerm_user_assigned_identity" "pipeline" {
+  for_each = var.pipeline_environments
+
+  name                = each.value.identity.name
+  resource_group_name = each.value.identity.resource_group
 }
