@@ -91,3 +91,40 @@ resource "github_actions_environment_variable" "apply" {
   variable_name = each.key
   value         = each.value
 }
+
+# Environments for var.pipeline_environments: repos whose identity
+# azure-landingzone creates. A `main_only` environment admits deployments from
+# main alone, so a branch can't log in as an identity that can apply (its
+# federated credential trusts this environment's subject).
+resource "github_repository_environment" "pipeline" {
+  for_each = var.pipeline_environments
+
+  repository  = github_repository.this[each.key].name
+  environment = each.value.environment
+
+  dynamic "deployment_branch_policy" {
+    for_each = each.value.main_only ? [1] : []
+
+    content {
+      protected_branches     = false
+      custom_branch_policies = true
+    }
+  }
+}
+
+resource "github_repository_environment_deployment_policy" "pipeline_main" {
+  for_each = { for key, p in var.pipeline_environments : key => p if p.main_only }
+
+  repository     = github_repository_environment.pipeline[each.key].repository
+  environment    = github_repository_environment.pipeline[each.key].environment
+  branch_pattern = "main"
+}
+
+resource "github_actions_environment_variable" "pipeline" {
+  for_each = local.pipeline_github_variables
+
+  repository    = github_repository_environment.pipeline[each.value.repo].repository
+  environment   = github_repository_environment.pipeline[each.value.repo].environment
+  variable_name = each.value.name
+  value         = each.value.value
+}

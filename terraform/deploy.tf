@@ -121,3 +121,15 @@ resource "azurerm_role_assignment" "apply_events_publisher" {
   principal_id         = data.azurerm_user_assigned_identity.apply.principal_id
   principal_type       = "ServicePrincipal"
 }
+
+# The same, for var.pipeline_environments' identities with `send_events`, so
+# their nightly drift checks record an OpsEvents_CL row. A data-plane right on
+# one rule; everything else they hold is azure-landingzone's to grant.
+resource "azurerm_role_assignment" "pipeline_events_publisher" {
+  for_each = local.pipeline_event_repos
+
+  scope                = data.azurerm_monitor_data_collection_rule.events[0].id
+  role_definition_name = "Monitoring Metrics Publisher"
+  principal_id         = data.azurerm_user_assigned_identity.pipeline[each.key].principal_id
+  principal_type       = "ServicePrincipal"
+}
