@@ -1,0 +1,114 @@
+name: manual-remove-lock
+
+# Removes one CanNotDelete management lock from a consumer's resource group,
+# when a store of record really has to go or be replaced. Run by hand only
+# (Actions -> manual-remove-lock -> Run workflow).
+#
+# Why here: consumer pipelines hold the Resource Lock Creator role
+# (terraform/deploy.tf) - they can create a lock but never delete one, since
+# every PR's CI runs as the same identity. Deleting needs
+# Microsoft.Authorization/locks/delete, which uai-github-repos-apply-dev
+# already has through User Access Administrator. So this runs in `apply`,
+# which only main can deploy to, like cd-terraform. No new identity or grant.
+#
+# Guard rails:
+# - Only the groups var.state_consumers lists in deploy_resource_groups
+#   (read from main's terraform.tfvars), so platform locks such as the
+#   bootstrap state accounts' stay out of reach.
+# - Exactly one lock of that name in the group, or nothing is deleted.
+# - `dry-run` (the default) lists what would be removed and stops.
+#
+# After removing a lock, also drop its azurerm_management_lock from the
+# consumer's Terraform. Otherwise the next plan recreates it.
+on:
+  workflow_dispatch:
+    inputs:
+      resource-group:
+        description: Consumer resource group holding the lock, e.g. rg-gymlog-dev
+        required: true
+        type: string
+      lock-name:
+        description: Name of the lock to remove, e.g. lock-stgymlogdev
+        required: true
+        type: string
+      dry-run:
+        description: Only show the lock that would be removed
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-remove-lock
+  cancel-in-progress: false
+
+jobs:
+  remove-lock:
+    name: Remove lock
+    runs-on: ubuntu-latest
+    environment: apply
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      RESOURCE_GROUP: ${{ inputs.resource-group }}
+      LOCK_NAME: ${{ inputs.lock-name }}
+      DRY_RUN: ${{ inputs.dry-run }}
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the group is a consumer's
+        run: |
+          if ! [[ "$RESOURCE_GROUP" =~ ^[A-Za-z0-9._()-]+$ && "$LOCK_NAME" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::resource-group or lock-name has unexpected characters."
+            exit 1
+          fi
+          groups=$(grep -ohP 'deploy_resource_groups\s*=\s*\[\K[^\]]*' terraform/terraform.tfvars |
+            tr -d '" ' | tr ',' '\n' | sed '/^$/d' | sort -u)
+          if ! grep -qxF "$RESOURCE_GROUP" <<<"$groups"; then
+            echo "::error::$RESOURCE_GROUP is not in any deploy_resource_groups in terraform.tfvars. Allowed:"
+            echo "$groups"
+            exit 1
+          fi
+
+      - name: Azure login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # `az lock list -g` returns the group's own locks and every lock on a
+      # resource inside it.
+      - name: Remove the lock
+        run: |
+          ids=$(az lock list --resource-group "$RESOURCE_GROUP" \
+            --query "[?name=='$LOCK_NAME'].id" -o tsv)
+          count=$(grep -c . <<<"$ids" || true)
+          if [ "$count" -ne 1 ]; then
+            echo "::error::Expected exactly one lock named $LOCK_NAME in $RESOURCE_GROUP, found $count."
+            az lock list --resource-group "$RESOURCE_GROUP" --query "[].{name:name, level:level, id:id}" -o table
+            exit 1
+          fi
+          echo "Lock: $ids"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::notice::Dry run: would remove $ids. Run again with dry-run unticked."
+            exit 0
+          fi
+          az lock delete --ids "$ids"
+          echo "::notice::Removed $ids. Drop its azurerm_management_lock from the repo's Terraform, or the next plan recreates it."
+          {
+            echo "### Lock removed"
+            echo
+            echo "\`$ids\`"
+            echo
+            echo "Drop its \`azurerm_management_lock\` from the repo's Terraform, or the next plan recreates it."
+          } >> "$GITHUB_STEP_SUMMARY"
