@@ -314,11 +314,20 @@ repos = {
     # Terraform. Alerting stays in Azure Monitor, so nothing depends on
     # Grafana being awake.
     #
-    # Only the template's checks until real CI exists and `gh pr checks`
-    # confirms more; `terraform-plan` joins once it plans against Azure.
+    # Read literally off `gh pr checks` on observability#20 and #23, not
+    # inferred from the workflow files. `terraform-plan` and `container-build`
+    # are the always-reporting gates over the path-filtered `plan` and `build`
+    # jobs, and `changes` (ci-container-build's path filter) always runs.
+    # `build / Build grafana`, `plan / ...` and `terraform / Validate (...)`/
+    # `terraform / Test (...)` are deliberately absent: when skipped they report
+    # under a different context (`build`, `plan`) or a matrix placeholder, so a
+    # required check on those names would leave some PRs pending for ever.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "terraform / Terraform" },
+      { context = "terraform-plan" },
+      { context = "changes" },
+      { context = "container-build" },
     ]
     # Runs CodeQL (ci-codeql.yml) over its GitHub Actions workflows, so new
     # high/critical alerts block merges.
