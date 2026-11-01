@@ -117,6 +117,14 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   subscription, created and granted by azure-landingzone's `governance`, never
   here) with an admin `TF_GITHUB_TOKEN` environment secret, the repo's one
   PAT. `apply` is the only environment; `schedule-drift` plans there nightly.
+- **manual-remove-lock** (`.github/workflows/manual-remove-lock.yml`): run by
+  hand only. Removes one management lock from a consumer's resource group
+  (only the groups listed in `deploy_resource_groups`), as the apply identity
+  in `apply`. Consumer pipelines can create locks but not delete them (the
+  Resource Lock Creator role in `terraform/deploy.tf`), so this is how a
+  store-of-record lock comes off. It defaults to a dry run. Afterwards, drop the
+  repo's `azurerm_management_lock` or the next plan recreates it. Inline
+  rather than a `workflows` call, since only this repo's identity may run it.
 
 ## Renovate
 
