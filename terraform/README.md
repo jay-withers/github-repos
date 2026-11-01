@@ -47,6 +47,12 @@ provider.
   each consumer on its `join_container_app_environments`. Writing a container
   app or job, by Terraform apply or image deploy, checks join on the
   environment, and the shared one belongs to azure-container-apps.
+- `azurerm_role_definition.resource_lock_creator` /
+  `azurerm_role_assignment.deploy_lock_creator` (`deploy.tf`) — a custom role
+  holding only `Microsoft.Authorization/locks/read` and `locks/write`,
+  assigned to each consumer on each of its `deploy_resource_groups`. A repo's
+  pipeline can put a `CanNotDelete` lock on its store of record but never
+  remove one (no `locks/delete`), so lifting a lock stays a human step.
 - `github_repository_environment.state` / `github_actions_environment_variable.state`
   (`actions.tf`) — a `dev` environment on each `var.state_consumers` repo,
   holding `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` as
@@ -204,12 +210,14 @@ repo and its ruleset.
 | [azurerm_role_assignment.apply_events_publisher](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
+| [azurerm_role_assignment.deploy_lock_creator](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy_rbac_admin](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.deploy_reader](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.events_publisher](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.pipeline_events_publisher](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_assignment.state_access](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) | resource |
 | [azurerm_role_definition.container_app_environment_join](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_definition) | resource |
+| [azurerm_role_definition.resource_lock_creator](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_definition) | resource |
 | [azurerm_storage_container.consumer](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) | resource |
 | [azurerm_storage_container.self](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) | resource |
 | [azurerm_user_assigned_identity.state](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) | resource |

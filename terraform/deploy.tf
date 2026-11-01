@@ -97,6 +97,38 @@ resource "azurerm_role_assignment" "deploy_join" {
   principal_type     = "ServicePrincipal"
 }
 
+# Lets a consumer's pipeline put a CanNotDelete lock on a store of record in
+# its own group, beside the resource's prevent_destroy (which only guards
+# against Terraform). Contributor and the conditioned RBAC Administrator
+# carry no `Microsoft.Authorization/locks/*`, so without this the lock would
+# need a local apply. Write but deliberately not delete: the pipeline can
+# create a lock and never remove one, so lifting it stays a human step.
+resource "azurerm_role_definition" "resource_lock_creator" {
+  count = length(local.deploy_resource_groups) > 0 ? 1 : 0
+
+  name        = "Resource Lock Creator"
+  scope       = data.azurerm_subscription.current.id
+  description = "Create management locks but never delete them. Managed by jay-withers/github-repos."
+
+  permissions {
+    actions = [
+      "Microsoft.Authorization/locks/read",
+      "Microsoft.Authorization/locks/write",
+    ]
+  }
+
+  assignable_scopes = [data.azurerm_subscription.current.id]
+}
+
+resource "azurerm_role_assignment" "deploy_lock_creator" {
+  for_each = local.deploy_resource_groups
+
+  scope              = local.deploy_resource_group_ids[each.key]
+  role_definition_id = azurerm_role_definition.resource_lock_creator[0].role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.state[each.value.consumer].principal_id
+  principal_type     = "ServicePrincipal"
+}
+
 # Lets a consumer's deploy workflow and workloads write Deployments_CL and
 # OpsEvents_CL rows through the platform's events rule. Granted here, beside
 # the identity, because it is a role assignment and no pipeline identity may
