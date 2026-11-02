@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: jay-withers/workflows/.github/workflows/terraform.yml@e58b7edf840e0d24387064427d7c7e81338c6d40 # v1.20.0
+    uses: jay-withers/workflows/.github/workflows/terraform.yml@d83d906fa10f612d6e295edb5804d41c487aa097 # v1.24.0
 
   # No credentialled plan on pull requests, deliberately. The only identity
   # and token that can read everything this configuration touches are the
