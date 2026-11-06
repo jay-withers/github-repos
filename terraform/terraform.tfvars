@@ -307,12 +307,11 @@ repos = {
     description             = "Grafana over the shared Log Analytics workspace: deploys, health, jobs and spend for every app on the shared Container Apps environment"
     topics                  = ["azure", "container-apps", "grafana", "observability"]
     generated_from_template = "template-repo-terraform-root"
-    # A seventh tenant of azure-container-apps: its own resource group, Key
-    # Vault, identity and a scale-to-zero Grafana container app, reaching the
-    # shared environment by name. Its state lives in the `grafana` database on
-    # the platform's shared Postgres server; dashboards and data sources are
-    # Terraform. Alerting stays in Azure Monitor, so nothing depends on
-    # Grafana being awake.
+    # A seventh tenant of azure-container-apps: its own resource group,
+    # identity and a scale-to-zero Grafana container app, reaching the shared
+    # environment by name. Its state is a SQLite file on the replica;
+    # dashboards and data sources ship in the image. Alerting stays in Azure
+    # Monitor, so nothing depends on Grafana being awake.
     #
     # Read literally off `gh pr checks` on observability#20 and #23, not
     # inferred from the workflow files. `terraform-plan` and `container-build`
@@ -565,7 +564,7 @@ state_consumers = {
   # also gets conditioned RBAC Administrator on it; each existing group was
   # imported from the one the repo's own first apply made.
   # Deliberately left looking its group up: RBAC Administrator on
-  # rg-platform-dev would reach Postgres, the workspace and the events rule
+  # rg-platform-dev would reach the workspace and the events rule
   # every app shares, for a platform that rarely changes and applies locally.
   # Sends events for its nightly drift check.
   "azure-container-apps" = {

@@ -155,8 +155,7 @@ TF_VAR_OPERATOR --env apply -R jay-withers/github-repos --body
 '{"object_id":"…","principal_name":"…","email":"…"}'`. Locally, export the
 same JSON as `TF_VAR_operator`. `actions.tf` passes it on to every consumer
 that applies from its pipeline as `TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS`,
-`TF_VAR_ADMINISTRATOR_OBJECT_ID`, `TF_VAR_ALERT_EMAIL_ADDRESS` and
-`TF_VAR_POSTGRES_ENTRA_ADMINISTRATOR`, which jay-withers/workflows'
+`TF_VAR_ADMINISTRATOR_OBJECT_ID` and `TF_VAR_ALERT_EMAIL_ADDRESS`, which jay-withers/workflows'
 `terraform-deploy.yml` (v1.20.0+) exports to Terraform.
 
 Never paste either credential into chat, commits, or these files —

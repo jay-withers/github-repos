@@ -253,10 +253,6 @@ locals {
     TF_VAR_KEY_VAULT_ADMINISTRATOR_OBJECT_IDS = jsonencode([var.operator.object_id])
     TF_VAR_ADMINISTRATOR_OBJECT_ID            = var.operator.object_id
     TF_VAR_ALERT_EMAIL_ADDRESS                = var.operator.email
-    TF_VAR_POSTGRES_ENTRA_ADMINISTRATOR = jsonencode({
-      object_id      = var.operator.object_id
-      principal_name = var.operator.principal_name
-    })
   }
 
   operator_github_variables = merge([
