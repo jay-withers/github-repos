@@ -136,9 +136,9 @@ repos = {
     # and Application Insights in azure-container-apps; stg/prd would still
     # create their own, but are planned only on paper and never applied.
     #
-    # Its PostgreSQL Flexible Server is the only thing in the estate that bills
-    # meaningfully while idle, at roughly GBP 13/month, and that SKU was forced
-    # rather than chosen - see that repo's CLAUDE.md on the region trap.
+    # Its database is a DuckDB file in blob storage, so nothing it owns bills
+    # meaningfully while idle. It replaced a PostgreSQL Flexible Server (about
+    # GBP 13/month), removed on 2026-11-05.
     #
     # Every workflow in that repo is a thin caller of a reusable workflow in
     # jay-withers/workflows, so all but one of these contexts is namespaced
