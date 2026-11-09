@@ -1,6 +1,6 @@
 # This repo's own state container: its backend (versions.tf). Not a consumer,
-# since this repo plans and applies only as azure-landingzone's apply identity,
-# which holds its own grant on this container. Moved out of the consumer map
+# since this repo plans and applies only as its own apply identity, which
+# scripts/bootstrap-state.ps1 grants on this container. Moved out of the consumer map
 # when the `dev` environment and its identity went, so nothing touches it.
 resource "azurerm_storage_container" "self" {
   #checkov:skip=CKV2_AZURE_21:Blob logging is an account setting, and the account is scripts/bootstrap-state.ps1's, not this module's.

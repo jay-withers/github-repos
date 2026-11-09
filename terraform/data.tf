@@ -56,8 +56,8 @@ data "azurerm_monitor_data_collection_rule" "events" {
   resource_group_name = var.events_ingestion.resource_group
 }
 
-# github-repos' own apply identity. Created and granted by azure-landingzone
-# (terraform/governance/main.github-repos.tf), never here: an apply of this
+# github-repos' own apply identity. Created and granted by
+# scripts/bootstrap-state.ps1 (`make bootstrap`, run by hand), never here: an apply of this
 # repo can't change the rights it applies with. Looked up only to set its
 # client ID on the apply environment.
 data "azurerm_user_assigned_identity" "apply" {
