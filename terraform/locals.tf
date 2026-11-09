@@ -79,8 +79,8 @@ locals {
   state_environment = "dev"
 
   # This repo's own applies run in a second environment, restricted to main,
-  # as an identity azure-landingzone's governance component creates and
-  # grants (Contributor + User Access Administrator on the subscription). Pull
+  # as an identity scripts/bootstrap-state.ps1 creates and grants
+  # (Contributor + User Access Administrator on the subscription). Pull
   # request plans stay in state_environment as this repo's ordinary consumer
   # identity, so branch code never holds those rights.
   apply_environment   = "apply"

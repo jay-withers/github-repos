@@ -114,8 +114,8 @@ Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery
   issue; **Actions → cd-terraform → Run workflow** applies that plan. Both run
   in the `apply` environment, which only `main` can deploy to, as
   `uai-github-repos-apply-dev` (Contributor + User Access Administrator on the
-  subscription, created and granted by azure-landingzone's `governance`, never
-  here) with an admin `TF_GITHUB_TOKEN` environment secret, the repo's one
+  subscription, created and granted by `make bootstrap`, run by hand as an
+  Owner, never by Terraform here) with an admin `TF_GITHUB_TOKEN` environment secret, the repo's one
   PAT. `apply` is the only environment; `schedule-drift` plans there nightly.
 - **manual-remove-lock** (`.github/workflows/manual-remove-lock.yml`): run by
   hand only. Removes one management lock from a consumer's resource group

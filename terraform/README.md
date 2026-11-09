@@ -139,9 +139,10 @@ the ruleset's Admin `bypass_actors` exemption:
   applies and the nightly drift check run in `apply`, which only `main` can
   deploy to, as `uai-github-repos-apply-dev`: Contributor + User Access
   Administrator on the subscription, Storage Blob Data Contributor on this
-  state container. azure-landingzone's `governance` component creates and
-  grants it (`main.github-repos.tf`), so no apply here can change what it
-  can change. `actions.tf` looks it up to set the environment's variables,
+  state container. `make bootstrap` (`../scripts/bootstrap-state.ps1`), run
+  by hand as an Owner, creates and grants it, so no apply here can change
+  what it can change. It used to come from azure-landingzone's `governance`;
+  the platform and apps no longer need the landing zone. `actions.tf` looks it up to set the environment's variables,
   and `deploy.tf` grants it only Monitoring Metrics Publisher on the events
   rule, for the drift row. **Pull requests get no credentialled plan**: the
   only credentials that can read everything here are the apply ones, and

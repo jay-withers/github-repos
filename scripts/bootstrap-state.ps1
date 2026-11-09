@@ -7,6 +7,14 @@
     data-plane RBAC grant. Every other consumer's container is Terraform's
     (terraform/state.tf), created when it is added to var.state_consumers.
 
+    It also creates this repo's CI apply identity, uai-github-repos-apply-dev:
+    its federated credential for the main-only `apply` environment,
+    Contributor + User Access Administrator on the subscription, and Storage
+    Blob Data Contributor on the github-repos container. With -BudgetAmount,
+    it also creates a monthly subscription budget. Both need an Owner of the
+    subscription, which is why they're here and not in Terraform: no apply of
+    this repo, running as that identity, can change its own rights.
+
 .DESCRIPTION
     This is deliberately NOT Terraform. With shared storage-account keys
     disabled, a Terraform-created storage account needs the applier's own
@@ -56,14 +64,35 @@
     RBAC. Defaults to whichever identity `az login` is currently signed in
     as.
 
+.PARAMETER BudgetAmount
+    Monthly subscription budget, in the billing currency. 0 (the default)
+    leaves budgets alone: in a tenant with azure-landingzone, its
+    `governance` component owns the subscription budget. Set it where there
+    is no landing zone, above all on pay-as-you-go, where nothing else stops
+    spend.
+
+.PARAMETER BudgetEmails
+    Who the budget notifies: at 80% of actual spend, and at 100% of forecast.
+    Required with -BudgetAmount.
+
 .EXAMPLE
     # Uses the hardcoded account identity.
     ./scripts/bootstrap-state.ps1
+
+.EXAMPLE
+    # A tenant without the landing zone: also a 50/month subscription budget.
+    ./scripts/bootstrap-state.ps1 -BudgetAmount 50 -BudgetEmails you@example.com
 #>
 [CmdletBinding()]
 param(
-    [string]$OperatorPrincipalId = (az account show --query user.name -o tsv)
+    [string]$OperatorPrincipalId = (az account show --query user.name -o tsv),
+    [int]$BudgetAmount = 0,
+    [string[]]$BudgetEmails = @()
 )
+
+if ($BudgetAmount -gt 0 -and $BudgetEmails.Count -eq 0) {
+    throw "-BudgetAmount needs -BudgetEmails: a budget nobody hears from does nothing."
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -120,6 +149,16 @@ $Location = "westeurope"
 # This repo's own backend container (versions.tf). Every other consumer's
 # container is created by terraform/state.tf.
 $Container = "github-repos"
+
+# The CI apply identity. Its name must match terraform/locals.tf's
+# apply_identity_name, which actions.tf looks up. The subject is the OIDC
+# subject of this repo's `apply` environment, in GitHub's immutable form
+# (owner and repo IDs from `gh api repos/jay-withers/github-repos --jq
+# '{id, owner: .owner.id}'`). The readable repo:<owner>/<repo> form never
+# matches its tokens (AADSTS700213). Neither changes with the Azure tenant.
+$ApplyIdentityName = "uai-github-repos-apply-dev"
+$ApplySubject = "repo:jay-withers@288264678/github-repos@1345898182:environment:apply"
+$BudgetName = "budget-subscription-monthly"
 
 # 1. Resource group.
 $rgExists = Invoke-Az group exists --name $ResourceGroupName -o tsv
@@ -191,4 +230,97 @@ else {
     Write-Host "$OperatorPrincipalId already has Storage Blob Data Contributor on $StorageAccountName."
 }
 
-Write-Host "Done. $StorageAccountName is ready with container $Container."
+# 6. The CI apply identity and its federated credential. Effectively Owner,
+# which makes it the exception to "keep grants targeted": github-repos creates
+# every other pipeline identity's grants, including Role Based Access Control
+# Administrator and a custom role at subscription scope, and that takes
+# Contributor plus User Access Administrator. What keeps it to merged code:
+# the credential trusts only the `apply` environment, which github-repos
+# restricts to main.
+$idJson = Invoke-Az identity show --resource-group $ResourceGroupName --name $ApplyIdentityName -AllowFailure
+if ($LastAzExitCode -ne 0) {
+    Write-Host "Creating identity $ApplyIdentityName..."
+    $idJson = Invoke-Az identity create --resource-group $ResourceGroupName --name $ApplyIdentityName `
+        --location $Location --tags "owner=jay" "component=identity" "managed-by=bootstrap-state.ps1"
+}
+else {
+    Write-Host "Identity $ApplyIdentityName already exists."
+}
+$applyIdentity = $idJson | ConvertFrom-Json
+
+$credJson = Invoke-Az identity federated-credential show --resource-group $ResourceGroupName `
+    --identity-name $ApplyIdentityName --name "github-repos-apply" -AllowFailure
+if ($LastAzExitCode -ne 0 -or ($credJson | ConvertFrom-Json).subject -ne $ApplySubject) {
+    Write-Host "Setting federated credential github-repos-apply ($ApplySubject)..."
+    $credVerb = if ($LastAzExitCode -ne 0) { "create" } else { "update" }
+    Invoke-Az identity federated-credential $credVerb --resource-group $ResourceGroupName `
+        --identity-name $ApplyIdentityName --name "github-repos-apply" `
+        --issuer "https://token.actions.githubusercontent.com" --subject $ApplySubject `
+        --audiences "api://AzureADTokenExchange" --output none | Out-Null
+}
+else {
+    Write-Host "Federated credential github-repos-apply is current."
+}
+
+# 7. Its grants. principal-type is always given: without it the CLI looks the
+# principal up in Entra, which fails intermittently on a just-created identity.
+$subscriptionScope = "/subscriptions/$(Invoke-Az account show --query id -o tsv)"
+$containerScope = "$($sa.id)/blobServices/default/containers/$Container"
+$grants = @(
+    @{ Role = "Contributor"; Scope = $subscriptionScope },
+    @{ Role = "User Access Administrator"; Scope = $subscriptionScope },
+    # Owner and User Access Administrator grant no blob data access, and the
+    # account has shared keys off. Its own container only.
+    @{ Role = "Storage Blob Data Contributor"; Scope = $containerScope }
+)
+foreach ($grant in $grants) {
+    $found = Invoke-Az role assignment list --assignee $applyIdentity.principalId --role $grant.Role `
+        --scope $grant.Scope -o json | ConvertFrom-Json
+    if ($found.Count -eq 0) {
+        Write-Host "Granting $($grant.Role) to $ApplyIdentityName on $($grant.Scope)..."
+        Invoke-Az role assignment create --assignee-object-id $applyIdentity.principalId `
+            --assignee-principal-type ServicePrincipal --role $grant.Role --scope $grant.Scope `
+            --output none | Out-Null
+    }
+    else {
+        Write-Host "$ApplyIdentityName already has $($grant.Role) on $($grant.Scope)."
+    }
+}
+
+# 8. Optional subscription budget, through the REST API: `az consumption
+# budget` can't set notifications. A budget only notifies; nothing in Azure
+# stops spend. An existing budget keeps its start date, because the API
+# refuses to move it.
+if ($BudgetAmount -gt 0) {
+    $budgetUrl = "https://management.azure.com$subscriptionScope/providers/Microsoft.Consumption/budgets/$($BudgetName)?api-version=2023-05-01"
+    $existingBudget = Invoke-Az rest --method get --url $budgetUrl -AllowFailure
+    $startDate = if ($LastAzExitCode -eq 0) {
+        ($existingBudget | ConvertFrom-Json).properties.timePeriod.startDate
+    }
+    else {
+        (Get-Date -Day 1).ToString("yyyy-MM-01T00:00:00Z")
+    }
+    $body = @{
+        properties = @{
+            category      = "Cost"
+            amount        = $BudgetAmount
+            timeGrain     = "Monthly"
+            timePeriod    = @{ startDate = $startDate }
+            notifications = @{
+                actual80      = @{ enabled = $true; operator = "GreaterThan"; threshold = 80; thresholdType = "Actual"; contactEmails = $BudgetEmails }
+                forecasted100 = @{ enabled = $true; operator = "GreaterThan"; threshold = 100; thresholdType = "Forecasted"; contactEmails = $BudgetEmails }
+            }
+        }
+    } | ConvertTo-Json -Depth 6
+    $bodyFile = New-TemporaryFile
+    try {
+        Set-Content -Path $bodyFile -Value $body
+        Write-Host "Setting subscription budget $BudgetName to $BudgetAmount a month..."
+        Invoke-Az rest --method put --url $budgetUrl --body "@$bodyFile" --output none | Out-Null
+    }
+    finally {
+        Remove-Item $bodyFile
+    }
+}
+
+Write-Host "Done. $StorageAccountName is ready with container $Container, and $ApplyIdentityName is granted."
