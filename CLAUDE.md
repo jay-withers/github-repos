@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo does
 
-Started as a language-agnostic GitHub repository template (dev container,
+Started as a language-agnostic GitHub repository template (pinned tools,
 generic pre-commit hooks, PR/merge CI workflows, Renovate, Conventional
 Commits enforcement, Makefile + branch-protection scaffolding) and now also
 carries this account's own application: a `terraform/` root module, in
@@ -14,16 +14,13 @@ carries this account's own application: a `terraform/` root module, in
 itself; the rest of this file still covers the template baseline it's built
 on.
 
-## Dev container
+## Tools
 
-The repo is built around the dev container at `.devcontainer/devcontainer.json`,
-which uses the `ghcr.io/jay-withers/dev-containers/terraform` image (the same
-one `terraform-root-aks` uses — installs `terraform`/`tfenv`, `tflint`,
-`terraform-docs` and `checkov` on top of the generic `base` image) and runs
-`make install` on creation to wire up the pre-commit hooks. Prefer working
-inside the container so tooling versions match CI. **Editing
-`devcontainer.json` doesn't affect an already-running container** — rebuild
-it (VS Code: "Dev Containers: Rebuild Container") to pick up an image change.
+`mise.toml` pins Terraform, TFLint, terraform-docs, Checkov, pre-commit,
+Python and shellcheck. `make install` runs `mise install`, then wires up the
+hooks. The shared workflows (v1.26.1+) install the same versions in CI, so a
+new tool or version bump goes in `mise.toml`. A machine is set up once with
+jay-withers/toolchain. There is no dev container.
 
 ## Commands
 
