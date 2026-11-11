@@ -401,12 +401,11 @@ repos = {
   }
 
   "dev-containers" = {
-    description = "Multi-arch VS Code dev container images - base, terraform and k8s - built from a shared base and published to ghcr.io for any repo to reference"
-    topics      = ["devcontainer", "docker", "ghcr", "azure"]
-    # Referenced by tag from each repo's .devcontainer/devcontainer.json, so
-    # nothing is built locally and every repo gets the same tool versions CI has.
-    # Tooling that belongs to everyone goes in `base`; anything Terraform- or
-    # Kubernetes-specific goes in the image above it.
+    description = "Multi-arch container images every app builds from or deploys with - python-app, python-app-builder and placeholder - published to ghcr.io"
+    topics      = ["docker", "ghcr", "azure"]
+    # Referenced by tag from each app's Dockerfile and Terraform. It used to
+    # build the dev-container images too (base, terraform, k8s); local tools now
+    # come from mise (each repo's mise.toml, plus toolchain).
     #
     # `base (...)`/`leaves (...)` (ci-container-build.yml) are deliberately
     # absent: that workflow path-filters them to `images/**`, so a docs-only PR
@@ -427,11 +426,11 @@ repos = {
   }
 
   "toolchain" = {
-    description = "Bootstrap script that installs the Azure, Kubernetes and Terraform toolchain on a fresh WSL or macOS machine"
-    topics      = ["bootstrap", "macos", "wsl", "azure"]
-    # The bare-metal counterpart to dev-containers: what you run on a new laptop
-    # before any repo is cloned. The dev container images cover everything after
-    # that, so these two should stay roughly in step on tool choice.
+    description = "Bootstrap script that installs mise and the Azure, Kubernetes and Terraform toolchain on a fresh WSL or macOS machine"
+    topics      = ["bootstrap", "macos", "wsl", "azure", "mise"]
+    # What you run on a new laptop before any repo is cloned: installs mise and
+    # the global tools. Each repo's mise.toml pins what that repo needs after
+    # that.
     #
     # `linux`/`macos` (test-install.yml) skip conditionally (only when `src/**`
     # changes), but the workflow's own `on: pull_request` trigger has no path
@@ -455,7 +454,7 @@ repos = {
 
   "factory" = {
     description             = "Front door for working across every jay-withers repository with Claude Code: clones them all on demand and ships each change as a PR in the repo it belongs to"
-    topics                  = ["claude-code", "automation", "devcontainer"]
+    topics                  = ["claude-code", "automation", "mise"]
     generated_from_template = "template-repo-base"
     # Holds no application code of its own. It reads this file's repos (via
     # `gh repo list`, which returns the descriptions and topics applied from
@@ -472,7 +471,7 @@ repos = {
   }
 
   "template-repo-base" = {
-    description = "Language-agnostic repository template: dev container, pre-commit hooks, CI workflows, Renovate and Conventional Commits, with no application code"
+    description = "Language-agnostic repository template: mise-pinned tools, pre-commit hooks, CI workflows, Renovate and Conventional Commits, with no application code"
     topics      = ["template", "scaffolding"]
     # The floor every new repo starts from. `generated_from_template` elsewhere
     # in this file records which repos came from a template, but GitHub applies

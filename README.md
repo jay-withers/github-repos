@@ -1,6 +1,6 @@
 # github-repos
 
-Started from a language-agnostic GitHub repository template (dev container,
+Started from a language-agnostic GitHub repository template (pinned tools,
 generic pre-commit hooks, PR/merge CI workflows, Renovate dependency updates,
 Conventional Commits enforcement, branch-protection scaffolding) and now also
 this account's own application: a `terraform/` module that creates and
@@ -12,13 +12,13 @@ this document covers the template baseline it's built on.
 
 1. Create a repo from this template (**Use this template** on GitHub, or `gh
    repo create --template`).
-2. Open it in the dev container (VS Code: **Reopen in Container**, or GitHub
-   Codespaces). The container runs `make install` on creation to wire up the
-   pre-commit hooks.
-3. Outside a dev container, install the hooks manually:
+2. Once per machine, set up the tools with
+   [jay-withers/toolchain](https://github.com/jay-withers/toolchain)
+   (`bash src/setup.sh`), which installs [mise](https://mise.jdx.dev).
+3. In the repo, install its pinned tools (`mise.toml`) and the git hooks:
 
    ```bash
-   make install
+   mise trust && make install   # make install runs `mise install` first
    ```
 
 4. Add the new repo to `terraform/terraform.tfvars`'s `var.repos`, merge, and
@@ -111,8 +111,7 @@ manages, the state/auth tradeoffs, and the PAT it needs.
 ## Structure
 
 ```text
-.devcontainer/
-  devcontainer.json    # dev container (ghcr.io/jay-withers/dev-containers/terraform)
+mise.toml              # pinned tool versions, used locally and in CI
 .github/
   workflows/
     ci-lint.yml        # lints all files on PRs to main (reusable workflow)

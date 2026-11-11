@@ -27,7 +27,7 @@
     to re-run. Adding a consumer no longer needs it.
 
     PowerShell is only the scripting shell here — every Azure call shells out
-    to the `az` CLI (already on PATH in the dev container image; no Az
+    to the `az` CLI (from mise via jay-withers/toolchain; no Az
     PowerShell modules required) via the Invoke-Az helper below. az CLI only
     signals failure through its process exit code, not a real exception the
     way Az PowerShell cmdlets do, so Invoke-Az checks that exit code itself
