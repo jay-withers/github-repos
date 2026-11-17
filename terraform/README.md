@@ -96,7 +96,7 @@ GitHub data.
 `terraform.tfstate*` left over from before the backend was wired in.
 
 Applying goes through CI like every other Terraform repo: `ci-terraform`
-plans each PR, `cd-terraform` plans each merge (opening a `terraform-pending`
+validates each PR (no credentialled plan, see Auth), `cd-terraform` plans each merge (opening a `terraform-pending`
 issue when there are changes), and **Actions → cd-terraform → Run workflow**
 applies. `make apply` locally is break-glass only: for an apply that broke the
 `apply` environment or its identity, or a required check nothing reports.
@@ -169,14 +169,15 @@ make init      # terraform init
 make fmt       # terraform fmt -recursive
 make validate  # terraform init + validate
 make plan      # terraform init + plan
-make apply     # terraform init + apply
+make apply     # terraform init + apply (break-glass: cd-terraform applies)
 ```
 
 ## Adding a repository
 
 Add an entry to `var.repos` in `terraform.tfvars` and open a PR. `ci-terraform`
-plans it; after merging, run `cd-terraform` from the Actions tab to create the
-repo and its ruleset.
+validates it; after merging, read the plan in the `terraform-pending` issue,
+then run `cd-terraform` from the Actions tab to create the repo and its
+ruleset.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
