@@ -1,130 +1,169 @@
 # github-repos
 
-Started from a language-agnostic GitHub repository template (pinned tools,
-generic pre-commit hooks, PR/merge CI workflows, Renovate dependency updates,
-Conventional Commits enforcement, branch-protection scaffolding) and now also
-this account's own application: a `terraform/` module that creates and
-manages every repository under `github.com/jay-withers`, this one included.
-See [`terraform/README.md`](terraform/README.md) for that module; the rest of
-this document covers the template baseline it's built on.
+Terraform that creates and manages every repository under
+`github.com/jay-withers`, this one included, through the
+[`integrations/github`](https://registry.terraform.io/providers/integrations/github/latest/docs)
+provider. It also owns each repo's Azure-facing plumbing: its container in
+the shared Terraform state account, the OIDC identity its pipeline uses, the
+role assignments that identity gets, and the GitHub environment variables
+that point the pipeline at it.
+
+[`terraform/README.md`](terraform/README.md) covers the module in detail:
+what each resource does, state, and auth.
+
+## What it manages
+
+- **Every repo's settings** (`repository.tf`, `ruleset.tf`): visibility,
+  squash-only merges, delete-branch-on-merge, auto-merge, private
+  vulnerability reporting, and a "Protect main" ruleset requiring a PR and
+  that repo's status checks. Settings common to every repo live once in
+  `locals.tf`; only the description, topics and required checks differ per
+  repo, in `var.repos`.
+- **Terraform state for the other repos** (`state.tf`, `identities.tf`): one
+  container in `sttfsharedjw` and one container-scoped identity per entry in
+  `var.state_consumers`, federated to that repo's `dev` environment.
+- **Deploy permissions** (`deploy.tf`): for repos whose pipeline applies,
+  Contributor on their resource groups (optionally created here), conditioned
+  RBAC Administrator, join on the shared Container Apps environment, and a
+  lock-creator role that can add a `CanNotDelete` lock but never remove one.
+- **Environment variables** (`actions.tf`): `AZURE_CLIENT_ID`,
+  `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` and the operator's `TF_VAR_*`
+  values on each consumer's `dev` environment.
+
+`terraform/terraform.tfvars` is committed: it *is* the desired state, and its
+comments are the estate's catalogue (grouping, apply order, dependencies).
+
+## Adding or changing a repo
+
+1. Edit `terraform/terraform.tfvars`: a `var.repos` entry for the repo
+   (description, topics, required status checks), plus a `state_consumers`
+   entry if it keeps Terraform state or deploys to Azure.
+2. Open a PR. `ci-terraform` validates it; PRs get no credentialled plan,
+   because the only credentials that can read everything here are the apply
+   ones, kept on `main`.
+3. Merge. `cd-terraform` plans and opens a `terraform-pending` issue with the
+   plan. Read it, then **Actions → cd-terraform → Run workflow** applies it.
+
+A repo not yet in `var.repos` has GitHub's default settings until that apply.
 
 ## Getting started
 
-1. Create a repo from this template (**Use this template** on GitHub, or `gh
-   repo create --template`).
-2. Once per machine, set up the tools with
-   [jay-withers/toolchain](https://github.com/jay-withers/toolchain)
-   (`bash src/setup.sh`), which installs [mise](https://mise.jdx.dev).
-3. In the repo, install its pinned tools (`mise.toml`) and the git hooks:
+Once per machine, set up the tools with
+[jay-withers/toolchain](https://github.com/jay-withers/toolchain), which
+installs [mise](https://mise.jdx.dev). Then, in this repo:
 
-   ```bash
-   mise trust && make install   # make install runs `mise install` first
-   ```
+```bash
+mise trust && make install   # mise install, then the pre-commit and commit-msg hooks
+```
 
-4. Add the new repo to `terraform/terraform.tfvars`'s `var.repos`, merge, and
-   run `cd-terraform` from the Actions tab (see [Managing GitHub repos with
-   Terraform](#managing-github-repos-with-terraform)) to pick up the
-   settings that can't be templated as files — auto-merge, branch
-   protection, required status checks. Until then, the repo just has
-   GitHub's defaults.
+A local plan needs both credentials described in
+[`terraform/README.md`](terraform/README.md#auth): `GITHUB_TOKEN` (an admin
+PAT) and an `az login` with `ARM_SUBSCRIPTION_ID` exported, plus the
+operator JSON as `TF_VAR_operator`.
 
 ## Commands
 
-Run `make` (or `make help`) to list the available targets:
+Run `make` (or `make help`) to list the targets:
 
 ```bash
-make install           # install pre-commit hooks (run once after cloning)
-make lint               # run all pre-commit hooks against every file
-make plan / apply       # terraform/ — see terraform/README.md for required auth
+make install     # install mise tools and pre-commit hooks (run once after cloning)
+make lint        # run all pre-commit hooks against every file
+make init        # terraform init (remote state: needs az login)
+make fmt         # terraform fmt -recursive
+make validate    # terraform init + validate
+make plan        # terraform init + plan
+make apply       # break-glass only: cd-terraform applies
+make destroy     # terraform destroy (never run as routine)
+make bootstrap   # create/update the shared state account and the apply identity (Owner, PowerShell 7+)
 ```
+
+`make apply` locally is for when an apply has broken the `apply` environment
+or its identity, or a required check nothing reports. `make bootstrap` runs
+`scripts/bootstrap-state.ps1`, which creates the `sttfsharedjw` state
+account, this repo's own container and the `uai-github-repos-apply-dev`
+identity outside Terraform; see its header comment.
 
 ## Pre-commit hooks
 
-Hooks live in `.pre-commit-config.yaml`, pinned by commit SHA with the tag as a
-frozen comment. They're deliberately language-agnostic:
+Hooks live in `.pre-commit-config.yaml`, pinned by commit SHA with the tag as
+a frozen comment:
 
-- `pre-commit/pre-commit-hooks` — large-file, case-conflict, merge-conflict,
-  symlink, YAML, end-of-file, trailing-whitespace, line-ending and shebang
-  checks, plus `no-commit-to-branch` (blocks direct commits to `main`)
-- `gitleaks` — secret scanning
-- `actionlint` — GitHub Actions workflow linting
-- `shellcheck` — shell scripts
-- `commitlint` — [Conventional Commits](https://www.conventionalcommits.org/),
-  at the `commit-msg` stage
+- `pre-commit/pre-commit-hooks`: large-file, case-conflict, merge-conflict,
+  symlink, YAML, end-of-file, trailing-whitespace, line-ending, shebang and
+  submodule checks, plus `no-commit-to-branch` (blocks direct commits to
+  `main`)
+- `gitleaks` (secrets), `actionlint` (workflows), `shellcheck` (shell
+  scripts), and `commitlint` ([Conventional
+  Commits](https://www.conventionalcommits.org/), at the `commit-msg` stage)
+- `terraform_fmt`, `terraform_validate` and `terraform_docs` (which
+  regenerates the block at the bottom of `terraform/README.md`)
+- local hooks: `check-tf-standards` (the estate's Terraform file layout,
+  copied verbatim from template-repo-terraform-root), and `tflint` and
+  `checkov` run against `terraform/` with `terraform.tfvars`
 
-As your repo gains a language, add its formatter/linter hooks here — don't
-remove these. Renovate keeps the frozen hook revisions up to date.
+## CI/CD
+
+Workflows are prefixed `ci-` (pull-request checks), `cd-` (post-merge
+delivery), `schedule-` or `manual-`. All but `manual-remove-lock` call a
+shared workflow in [jay-withers/workflows](https://github.com/jay-withers/workflows),
+pinned by SHA.
+
+- **ci-lint**: every pre-commit hook, with Terraform installed. Check:
+  `pre-commit / Pre-commit`.
+- **ci-terraform**: credential-free validate. Checks: `terraform / Terraform`
+  and the `terraform-plan` gate.
+- **ci-codeql**: CodeQL code scanning of the workflows.
+- **cd-terraform**: plans each merge touching Terraform and opens a
+  `terraform-pending` issue; run by hand, it applies. Both run in the
+  main-only `apply` environment, as `uai-github-repos-apply-dev` with the
+  `TF_GITHUB_TOKEN` environment secret.
+- **cd-tag**: a semver tag and release on every merge to `main`.
+- **schedule-drift**: a nightly plan in `apply` that records drift and never
+  applies.
+- **manual-terraform-unlock**: releases a stuck state lock, given the lock ID
+  from an "Error acquiring the state lock" message.
+- **manual-remove-lock**: removes one management lock from a consumer's
+  resource group (only those in `deploy_resource_groups`). Consumer pipelines
+  can create locks but not delete them, so this is how a store-of-record lock
+  comes off. Dry run by default; afterwards remove the repo's
+  `azurerm_management_lock`, or its next plan recreates it.
+
+## Renovate
+
+`renovate.json` extends the shared preset
+[`github>jay-withers/renovate`](https://github.com/jay-withers/renovate)
+(Monday schedule, auto-merge once checks pass, the `pre-commit` and `mise`
+managers), plus `autoApprove: true`. Auto-merge works because this repo's
+Terraform turns on repo-level auto-merge everywhere.
 
 ## Commit messages
 
 Commits must follow [Conventional Commits](https://www.conventionalcommits.org/),
-enforced by commitlint at commit-msg time. The commit type drives the automatic
-version bump on merge (see below). Examples:
-
-```text
-feat: add health check endpoint
-fix: correct retry backoff
-chore: bump dependency
-```
-
-## CI/CD
-
-Workflows are prefixed `ci-` (pull-request checks) or `cd-` (post-merge delivery):
-
-- **`.github/workflows/ci-lint.yml`** — runs all pre-commit hooks on PRs
-  to `main`, by calling the shared reusable workflow
-  `jay-withers/workflows/.github/workflows/pre-commit.yml`. Its status
-  check reports as `pre-commit / Pre-commit`.
-- **`.github/workflows/cd-tag.yml`** — on every merge to `main`, creates a
-  semver tag and matching GitHub release from the Conventional Commits since the
-  last release (default bump: patch), via
-  `jay-withers/workflows/.github/workflows/release.yml`.
-- **`.github/workflows/ci-terraform.yml`** — validates `terraform/` and, on
-  PRs that touch it, plans it and comments the plan.
-- **`.github/workflows/cd-terraform.yml`** — plans on merge and opens a
-  `terraform-pending` issue; running it by hand applies (see
-  [`terraform/README.md`](terraform/README.md)).
-
-Both `ci-lint`/`cd-tag` pin the reusable workflow by commit SHA with the tag
-as a comment. Add your own `ci-*` workflows (build, test, etc.) as you add
-code, and require their checks by adding them to the repo's
-`required_status_checks` in `terraform/terraform.tfvars`'s `var.repos` (see
-below).
-
-## Renovate
-
-`renovate.json` extends `config:recommended` on a weekly schedule with
-auto-approve and automerge. `platformAutomerge` needs repo-level auto-merge to
-be enabled — Terraform does that once a repo is added to `var.repos` (see
-below). The `pre-commit` manager updates the frozen hook revisions in
-`.pre-commit-config.yaml`; add language/ecosystem managers as your repo grows.
-
-## Managing GitHub repos with Terraform
-
-`terraform/` creates and manages every jay-withers GitHub repository —
-including this one — via the `integrations/github` provider, normalizing
-each onto the settings `terraform-root-aks` had configured by hand. State is
-remote; changes are planned on PR and on merge, and applied by running
-`cd-terraform` from the Actions tab. See [`terraform/README.md`](terraform/README.md) for what it
-manages, the state/auth tradeoffs, and the PAT it needs.
+enforced by commitlint at commit-msg time. The type drives the version bump
+on merge: `feat: add the cloudflare repo`, `fix: require the plan gate on
+career`, `chore: bump the github provider`.
 
 ## Structure
 
 ```text
-mise.toml              # pinned tool versions, used locally and in CI
-.github/
-  workflows/
-    ci-lint.yml        # lints all files on PRs to main (reusable workflow)
-    cd-tag.yml         # auto-tags + releases on merge to main (semver, conventional commits)
-    ci-terraform.yml   # validates and plans terraform/ on PRs
-    cd-terraform.yml   # plans on merge; applies when run by hand
-.editorconfig          # baseline editor settings (aligned with pre-commit hooks)
-.gitattributes         # git-level LF normalization
+mise.toml                  # pinned tool versions, used locally and in CI
+terraform/
+  terraform.tfvars         # every repo and state consumer: the desired state
+  repository.tf ruleset.tf # repo settings and the "Protect main" ruleset
+  state.tf identities.tf   # state containers and per-repo identities
+  deploy.tf                # resource groups and role assignments for pipelines that apply
+  actions.tf               # GitHub environments and their variables
+  data.tf locals.tf variables.tf outputs.tf versions.tf
+  README.md                # the module, state and auth; terraform-docs block below
+scripts/
+  bootstrap-state.ps1      # make bootstrap: state account + apply identity
+  check-tf-standards.sh    # pre-commit: Terraform file layout
+  tflint.sh checkov.sh     # pre-commit: lint terraform/ with terraform.tfvars
+.github/workflows/         # ci-lint, ci-terraform, ci-codeql, cd-terraform, cd-tag,
+                           # schedule-drift, manual-terraform-unlock, manual-remove-lock
 .pre-commit-config.yaml
-commitlint.config.js   # commitlint (Conventional Commits) config
-renovate.json          # automated dependency updates
-terraform/              # manages every jay-withers GitHub repo (see terraform/README.md)
-CLAUDE.md              # guidance for Claude Code
-LICENSE
+commitlint.config.js
+renovate.json
+CLAUDE.md
 Makefile
 ```
