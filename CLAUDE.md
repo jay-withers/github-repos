@@ -4,15 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo does
 
-Started as a language-agnostic GitHub repository template (pinned tools,
-generic pre-commit hooks, PR/merge CI workflows, Renovate, Conventional
-Commits enforcement, Makefile + branch-protection scaffolding) and now also
-carries this account's own application: a `terraform/` root module, in
-`terraform/`, that creates and manages every repository under
-`github.com/jay-withers` — including this one — via the
-`integrations/github` provider. See `terraform/README.md` for the module
-itself; the rest of this file still covers the template baseline it's built
-on.
+A Terraform root module, in `terraform/`, that creates and manages every
+repository under `github.com/jay-withers` — including this one — via the
+`integrations/github` provider: settings, the "Protect main" ruleset and its
+required checks, Actions variables and environments, and the per-repo Azure
+identities and state containers the pipelines use. `terraform/terraform.tfvars`
+is the estate's canonical catalogue. See `terraform/README.md` for the module
+itself. The repo was built from `template-repo-base`, so the tooling sections
+below (mise, pre-commit, Conventional Commits, CI naming) follow that
+baseline.
 
 ## Tools
 
