@@ -304,20 +304,20 @@ repos = {
   }
 
   "observability" = {
-    description             = "Grafana over the shared Log Analytics workspace: deploys, health, jobs and spend for every app on the shared Container Apps environment"
-    topics                  = ["azure", "container-apps", "grafana", "observability"]
+    description             = "Dashboards over the shared Log Analytics workspace (obsview, a FastAPI app): deploys, health, jobs and spend for every app on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "fastapi", "observability"]
     generated_from_template = "template-repo-terraform-root"
     # A seventh tenant of azure-container-apps: its own resource group,
-    # identity and a scale-to-zero Grafana container app, reaching the shared
-    # environment by name. Its state is a SQLite file on the replica;
-    # dashboards and data sources ship in the image. Alerting stays in Azure
-    # Monitor, so nothing depends on Grafana being awake.
+    # identity and a scale-to-zero container app running obsview (a FastAPI
+    # dashboards app that replaced Grafana), reaching the shared environment
+    # by name. It keeps no state: every view is a query on the workspace.
+    # Alerting stays in Azure Monitor, so nothing depends on it being awake.
     #
     # Read literally off `gh pr checks` on observability#20 and #23, not
     # inferred from the workflow files. `terraform-plan` and `container-build`
     # are the always-reporting gates over the path-filtered `plan` and `build`
     # jobs, and `changes` (ci-container-build's path filter) always runs.
-    # `build / Build grafana`, `plan / ...` and `terraform / Validate (...)`/
+    # `build / Build obsview`, `plan / ...` and `terraform / Validate (...)`/
     # `terraform / Test (...)` are deliberately absent: when skipped they report
     # under a different context (`build`, `plan`) or a matrix placeholder, so a
     # required check on those names would leave some PRs pending for ever.
