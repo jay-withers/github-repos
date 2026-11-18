@@ -426,7 +426,7 @@ repos = {
   }
 
   "appkit" = {
-    description             = "Shared Python library for the jay-withers apps - security headers, the passcode gate, health checks, selfcheck and the backup job - installed from a git tag"
+    description             = "Shared Python library for the jay-withers apps - security headers, the passcode gate, secret resolution, selfcheck and the backup job - installed from a git tag"
     topics                  = ["python", "fastapi", "library", "azure"]
     generated_from_template = "template-repo-base"
     # Replaces the modules career, finances and gym-log each carry a copy of
@@ -436,11 +436,11 @@ repos = {
     # which is why it is public like every repo here: a Docker build fetches
     # it with no token. Renovate bumps the tag.
     #
-    # Only the template's pre-commit check to start with: `test / Test` joins
-    # once the repo has its ci-python workflow, since a required check that no
-    # workflow reports blocks every PR, the first one included.
+    # `test / Test` is ci-python (pytest, mypy, diff coverage): every app
+    # picks up a release on its next bump, so a red suite must never merge.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
     ]
     # Runs CodeQL (ci-codeql.yml, from the template), so new high/critical
     # alerts block merges.
