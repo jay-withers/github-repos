@@ -425,6 +425,28 @@ repos = {
     code_scanning = true
   }
 
+  "appkit" = {
+    description             = "Shared Python library for the jay-withers apps - security headers, the passcode gate, health checks, selfcheck and the backup job - installed from a git tag"
+    topics                  = ["python", "fastapi", "library", "azure"]
+    generated_from_template = "template-repo-base"
+    # Replaces the modules career, finances and gym-log each carry a copy of
+    # (api/headers.py verbatim in all three, the passcode gate, selfcheck and
+    # backup.py adapted from one another), so a fix is made once. The apps
+    # install it as `appkit @ git+https://github.com/jay-withers/appkit@vX.Y.Z`,
+    # which is why it is public like every repo here: a Docker build fetches
+    # it with no token. Renovate bumps the tag.
+    #
+    # Only the template's pre-commit check to start with: `test / Test` joins
+    # once the repo has its ci-python workflow, since a required check that no
+    # workflow reports blocks every PR, the first one included.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+    ]
+    # Runs CodeQL (ci-codeql.yml, from the template), so new high/critical
+    # alerts block merges.
+    code_scanning = true
+  }
+
   "toolchain" = {
     description = "Bootstrap script that installs mise and the Azure, Kubernetes and Terraform toolchain on a fresh WSL or macOS machine"
     topics      = ["bootstrap", "macos", "wsl", "azure", "mise"]
