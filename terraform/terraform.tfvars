@@ -200,8 +200,12 @@ repos = {
     code_scanning = true
   }
 
-  "gym-log" = {
-    description = "Twice-weekly full-body training log with progression suggestions, replacing a spreadsheet, on the shared Container Apps environment"
+  # Renamed from gym-log on 2026-11-21: the app had grown past a training log
+  # (Garmin sync, chat, weekly insights) and was already served at
+  # health.jaywithers.uk. Its Azure names keep `gymlog`, and its
+  # state_consumers entry keeps the key "gym-log" - see there.
+  "health" = {
+    description = "Health tracker: a twice-weekly full-body training log with progression suggestions, Garmin activity sync and weekly insights, on the shared Container Apps environment"
     topics      = ["azure", "python", "fastapi", "container-apps"]
     # The second tenant of azure-container-apps, and the first `container app`
     # on it rather than a scheduled job — so it is also the first thing there
@@ -213,7 +217,7 @@ repos = {
     # that storage account is the one resource in the estate carrying
     # `prevent_destroy`.
     #
-    # Read literally off `gh pr checks` on gym-log#17, not inferred from the
+    # Read literally off `gh pr checks` on health#17, not inferred from the
     # workflow files. `terraform / Validate (...)`/`terraform / Test (...)` and
     # `build / Build gymlog` are deliberately absent, same reasoning as
     # repo-agent's `build` context: the matrix legs only run conditionally and
@@ -234,14 +238,14 @@ repos = {
     description             = "Personal finance tracker, on the shared Container Apps environment"
     topics                  = ["azure", "container-apps", "finance"]
     generated_from_template = "template-repo-terraform-root"
-    # A third tenant of azure-container-apps, same shape as gym-log: its own
+    # A third tenant of azure-container-apps, same shape as health: its own
     # resource group, Key Vault, identity and storage account, reaching the
     # shared environment by name rather than running its own.
     #
     # Read literally off `gh pr checks` on finances#12, not inferred from the
     # workflow files. `terraform / Validate (...)`/`terraform / Test (...)` and
     # `build / Build finances` are deliberately absent, same reasoning as
-    # gym-log's: the matrix legs only run conditionally and ci-container-build's
+    # health's: the matrix legs only run conditionally and ci-container-build's
     # build job is path-filtered, so a required check that never reports on
     # some PRs would leave those pending for ever.
     required_status_checks = [
@@ -259,7 +263,7 @@ repos = {
     description             = "Career profile, LinkedIn-export import, job-opportunity aggregation and market/advancement insights, on the shared Container Apps environment"
     topics                  = ["azure", "python", "fastapi", "container-apps"]
     generated_from_template = "template-repo-terraform-root"
-    # A fourth tenant of azure-container-apps, same shape as gym-log/finances:
+    # A fourth tenant of azure-container-apps, same shape as health/finances:
     # its own resource group, Key Vault, identity and storage account,
     # reaching the shared environment by name rather than running its own.
     #
@@ -429,7 +433,7 @@ repos = {
     description             = "Shared Python library for the jay-withers apps - security headers, the passcode gate, secret resolution, selfcheck and the backup job - installed from a git tag"
     topics                  = ["python", "fastapi", "library", "azure"]
     generated_from_template = "template-repo-base"
-    # Replaces the modules career, finances and gym-log each carry a copy of
+    # Replaces the modules career, finances and health each carry a copy of
     # (api/headers.py verbatim in all three, the passcode gate, selfcheck and
     # backup.py adapted from one another), so a fix is made once. The apps
     # install it as `appkit @ git+https://github.com/jay-withers/appkit@vX.Y.Z`,
@@ -612,8 +616,14 @@ state_consumers = {
     ]
   }
 
+  # The repo is jay-withers/health (renamed from gym-log), but the key stays
+  # "gym-log": it names the state container (`gym-log`, prevent_destroy, which
+  # health's backends/dev.hcl points at) and the deploy identity, named from
+  # the key, whose client ID and RBAC on rg-gymlog-dev the pipeline uses.
+  # Renaming the key would replace both. Nothing parses the key as a repo
+  # name: every repo lookup goes through github_repo.
   "gym-log" = {
-    github_repo            = "jay-withers/gym-log"
+    github_repo            = "jay-withers/health"
     send_events            = true
     deploy_resource_groups = ["rg-gymlog-dev"]
     create_resource_groups = true
