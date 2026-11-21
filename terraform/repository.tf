@@ -94,3 +94,24 @@ resource "terraform_data" "private_vulnerability_reporting" {
     command = "gh api --silent --method PUT repos/${each.value.full_name}/private-vulnerability-reporting"
   }
 }
+
+# gym-log was renamed to health (terraform.tfvars). With these the provider
+# renames the repo in place; without them it would destroy gym-log and create
+# an empty health. They keep the history in state, but resources whose
+# `repository` is ForceNew (the alerts, the ruleset and the `dev` environment
+# with its variables) are still recreated on the new name in the same apply,
+# and private vulnerability reporting re-runs on the new full_name.
+moved {
+  from = github_repository.this["gym-log"]
+  to   = github_repository.this["health"]
+}
+
+moved {
+  from = github_repository_vulnerability_alerts.this["gym-log"]
+  to   = github_repository_vulnerability_alerts.this["health"]
+}
+
+moved {
+  from = terraform_data.private_vulnerability_reporting["gym-log"]
+  to   = terraform_data.private_vulnerability_reporting["health"]
+}

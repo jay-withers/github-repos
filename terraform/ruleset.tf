@@ -82,3 +82,9 @@ resource "github_repository_ruleset" "main" {
     ]
   }
 }
+
+# gym-log was renamed to health; see the moved blocks in repository.tf.
+moved {
+  from = github_repository_ruleset.main["gym-log"]
+  to   = github_repository_ruleset.main["health"]
+}
