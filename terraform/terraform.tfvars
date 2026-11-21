@@ -219,7 +219,7 @@ repos = {
     #
     # Read literally off `gh pr checks` on health#17, not inferred from the
     # workflow files. `terraform / Validate (...)`/`terraform / Test (...)` and
-    # `build / Build gymlog` are deliberately absent, same reasoning as
+    # `build / Build health` are deliberately absent, same reasoning as
     # repo-agent's `build` context: the matrix legs only run conditionally and
     # ci-container-build's build job is path-filtered, so a required check that
     # never reports on some PRs would leave those pending for ever.
