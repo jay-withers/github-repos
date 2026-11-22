@@ -359,12 +359,15 @@ repos = {
     # inferred from the workflow files. `terraform-plan` and `container-build`
     # are the always-reporting gates over the path-filtered `plan` and `build`
     # jobs, and `changes` (ci-container-build's path filter) always runs.
+    # `test / Test` (ci-python.yml, obsview's tests) has no path filter and
+    # reported on every PR from observability#91 to #99.
     # `build / Build obsview`, `plan / ...` and `terraform / Validate (...)`/
     # `terraform / Test (...)` are deliberately absent: when skipped they report
     # under a different context (`build`, `plan`) or a matrix placeholder, so a
     # required check on those names would leave some PRs pending for ever.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
+      { context = "test / Test" },
       { context = "terraform / Terraform" },
       { context = "terraform-plan" },
       { context = "changes" },
