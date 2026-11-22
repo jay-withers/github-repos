@@ -124,6 +124,44 @@ repos = {
   }
 
   # ---------------------------------------------------------------------------
+  # Google Cloud estate. The foundations a workload on GCP needs, kept apart
+  # from Azure rather than bolted onto it.
+  # ---------------------------------------------------------------------------
+
+  "gcp-landingzone" = {
+    description             = "Terraform for the Google Cloud foundations: projects, Workload Identity Federation for GitHub Actions, Terraform state, an Artifact Registry proxy for ghcr.io and per-repo deploy identities"
+    topics                  = ["gcp", "terraform", "landing-zone"]
+    generated_from_template = "template-repo-terraform-root"
+    # The GCP counterpart of azure-landingzone, and the first thing on Google
+    # Cloud: nothing else in this file uses it yet. health moves here first, to
+    # Cloud Run in europe-west1. Must be applied before any repo can deploy to
+    # GCP.
+    #
+    # Its `bootstrap` component (projects, the state bucket, the Workload
+    # Identity pool, its own pipeline identity, the budget) is applied by hand,
+    # like azure-landingzone's. The rest is meant to plan on merge and apply
+    # through cd-terraform, which needs two things first: a GCP auth path in
+    # workflows' terraform-deploy.yml (Azure-only today), and the GCP_*
+    # variables on a main-only `apply` environment here, which name values
+    # bootstrap creates. Until both land, the rest is `make apply` by hand.
+    #
+    # Its state lives in its own GCS bucket, not sttfsharedjw, so there is no
+    # state_consumers entry.
+    #
+    # The template's two checks, as for azure-landingzone, and for the same
+    # reason never `terraform-plan`: its only identity that can read
+    # everything is the main-only apply one, so pull requests get no plan and
+    # nothing would report that check.
+    required_status_checks = [
+      { context = "pre-commit / Pre-commit" },
+      { context = "terraform / Terraform" },
+    ]
+    # Runs CodeQL (ci-codeql.yml, from the template), so new high/critical
+    # alerts block merges.
+    code_scanning = true
+  }
+
+  # ---------------------------------------------------------------------------
   # Workloads. Applications with their own Terraform, image and CD.
   # ---------------------------------------------------------------------------
 
