@@ -110,31 +110,59 @@ variable "pipeline_environments" {
     GitHub environments for repos that apply from their own pipeline but
     aren't `state_consumers`, because their identity and state live
     elsewhere: azure-landingzone's own apply identity (its bootstrap
-    component) and the identities its landingzones component vends to
-    spokes. Keyed by repo name, which must also be in var.repos.
+    component), the identities its landingzones component vends to spokes,
+    and Google Cloud identities (gcp-landingzone's). Keyed by repo name,
+    which must also be in var.repos.
 
-    `identity` names the existing user-assigned identity, looked up by data
-    source to set AZURE_CLIENT_ID; nothing here creates or grants it beyond
-    `send_events`. `main_only` restricts deployments to main, for an
+    Exactly one of `identity` or `gcp`. `identity` names the existing Azure
+    user-assigned identity, looked up by data source to set AZURE_CLIENT_ID;
+    nothing here creates or grants it beyond `send_events`. `gcp` sets
+    GCP_WORKLOAD_IDENTITY_PROVIDER (the provider's full name) and, if given,
+    GCP_SERVICE_ACCOUNT, for jay-withers/workflows' `cloud: gcp` (v1.32.0+).
+    They're literals: gcp-landingzone's bootstrap creates both, and this repo
+    has no Google access. `main_only` restricts deployments to main, for an
     environment whose identity can apply. `send_events` grants Monitoring
     Metrics Publisher on the events rule and sets EVENTS_INGESTION_ENDPOINT
-    and EVENTS_DCR_IMMUTABLE_ID, as for a consumer. `operator_variables` sets
+    and EVENTS_DCR_IMMUTABLE_ID, as for a consumer; it is Azure's, so it
+    needs `identity`. `operator_variables` sets
     the operator's TF_VAR_* variables, as for a consumer that applies from its
     pipeline (local.operator_github_variables).
   DESCRIPTION
 
   type = map(object({
     environment = string
-    identity = object({
+    identity = optional(object({
       name           = string
       resource_group = string
-    })
+    }))
+    gcp = optional(object({
+      workload_identity_provider = string
+      service_account            = optional(string)
+    }))
     main_only          = optional(bool, false)
     send_events        = optional(bool, false)
     operator_variables = optional(bool, false)
   }))
 
   default = {}
+
+  validation {
+    condition     = alltrue([for p in values(var.pipeline_environments) : (p.identity == null) != (p.gcp == null)])
+    error_message = "Each pipeline environment takes exactly one of identity (Azure) or gcp."
+  }
+
+  validation {
+    condition     = alltrue([for p in values(var.pipeline_environments) : !p.send_events || p.identity != null])
+    error_message = "send_events records to Azure's events rule, so it needs an Azure identity."
+  }
+
+  validation {
+    condition = alltrue([
+      for p in values(var.pipeline_environments) :
+      p.gcp == null ? true : can(regex("^projects/[0-9]+/locations/global/workloadIdentityPools/[^/]+/providers/[^/]+$", p.gcp.workload_identity_provider))
+    ])
+    error_message = "gcp.workload_identity_provider is the provider's full name: projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>."
+  }
 }
 
 variable "events_ingestion" {

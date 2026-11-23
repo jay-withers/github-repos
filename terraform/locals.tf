@@ -157,11 +157,15 @@ locals {
   pipeline_github_variables = merge([
     for key, p in var.pipeline_environments : {
       for name, value in merge(
-        {
+        p.identity != null ? {
           AZURE_CLIENT_ID       = data.azurerm_user_assigned_identity.pipeline[key].client_id
           AZURE_TENANT_ID       = data.azurerm_subscription.current.tenant_id
           AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
-        },
+        } : {},
+        p.gcp != null ? merge(
+          { GCP_WORKLOAD_IDENTITY_PROVIDER = p.gcp.workload_identity_provider },
+          p.gcp.service_account != null ? { GCP_SERVICE_ACCOUNT = p.gcp.service_account } : {},
+        ) : {},
         p.send_events ? {
           EVENTS_INGESTION_ENDPOINT = data.azurerm_monitor_data_collection_endpoint.events[0].logs_ingestion_endpoint
           EVENTS_DCR_IMMUTABLE_ID   = data.azurerm_monitor_data_collection_rule.events[0].immutable_id

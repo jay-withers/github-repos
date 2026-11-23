@@ -70,7 +70,7 @@ data "azurerm_user_assigned_identity" "apply" {
 # up only to set their client IDs and, with `send_events`, grant the events
 # rule.
 data "azurerm_user_assigned_identity" "pipeline" {
-  for_each = var.pipeline_environments
+  for_each = { for key, p in var.pipeline_environments : key => p if p.identity != null }
 
   name                = each.value.identity.name
   resource_group_name = each.value.identity.resource_group
