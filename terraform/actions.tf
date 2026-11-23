@@ -93,7 +93,7 @@ resource "github_actions_environment_variable" "apply" {
 }
 
 # Environments for var.pipeline_environments: repos whose identity
-# azure-landingzone creates. A `main_only` environment admits deployments from
+# azure-landingzone or gcp-landingzone creates. A `main_only` environment admits deployments from
 # main alone, so a branch can't log in as an identity that can apply (its
 # federated credential trusts this environment's subject).
 resource "github_repository_environment" "pipeline" {

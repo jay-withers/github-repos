@@ -139,14 +139,13 @@ repos = {
     #
     # Its `bootstrap` component (projects, the state bucket, the Workload
     # Identity pool, its own pipeline identity, the budget) is applied by hand,
-    # like azure-landingzone's. The rest is meant to plan on merge and apply
-    # through cd-terraform, which needs two things first: a GCP auth path in
-    # workflows' terraform-deploy.yml (Azure-only today), and the GCP_*
-    # variables on a main-only `apply` environment here, which name values
-    # bootstrap creates. Until both land, the rest is `make apply` by hand.
+    # like azure-landingzone's. The rest plans on merge and applies through
+    # cd-terraform with workflows' `cloud: gcp` (v1.32.0+), in the main-only
+    # `apply` environment pipeline_environments below gives it, holding the
+    # GCP_* variables that name what bootstrap created. Its state is in that
+    # bootstrap's bucket.
     #
-    # Its state lives in its own GCS bucket, not sttfsharedjw, so there is no
-    # state_consumers entry.
+    # That bucket is not sttfsharedjw, so there is no state_consumers entry.
     #
     # The template's two checks, as for azure-landingzone, and for the same
     # reason never `terraform-plan`: its only identity that can read
@@ -582,8 +581,8 @@ repos = {
 }
 
 # Environments for repos that apply from their own pipeline with an identity
-# azure-landingzone creates, rather than one made here - see
-# var.pipeline_environments.
+# azure-landingzone or gcp-landingzone creates, rather than one made here -
+# see var.pipeline_environments.
 pipeline_environments = {
   # azure-landingzone's own apply identity (its bootstrap component's
   # main.pipeline.tf): Contributor + User Access Administrator on the
@@ -613,6 +612,20 @@ pipeline_environments = {
     # Its vault and Loki grants name the operator by object ID rather than
     # following whoever applies.
     operator_variables = true
+  }
+
+  # gcp-landingzone's own apply identity (its bootstrap component's
+  # main.pipeline.tf), federated to this environment's subject only. Its
+  # roles stop at the apps folder, the platform project and its own state
+  # prefix, but it can grant within them, so main only, like
+  # azure-landingzone's. cd-terraform will run here once foundation exists.
+  "gcp-landingzone" = {
+    environment = "apply"
+    gcp = {
+      workload_identity_provider = "projects/729113118420/locations/global/workloadIdentityPools/github/providers/github-actions"
+      service_account            = "gcp-landingzone-apply@jaywithers-platform.iam.gserviceaccount.com"
+    }
+    main_only = true
   }
 }
 
