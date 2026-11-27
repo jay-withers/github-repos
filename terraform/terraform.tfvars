@@ -346,12 +346,13 @@ repos = {
   }
 
   "observability" = {
-    description             = "Dashboards over the shared Log Analytics workspace (obsview, a FastAPI app): deploys, health, jobs and spend for every app on the shared Container Apps environment"
-    topics                  = ["azure", "container-apps", "fastapi", "observability"]
+    description             = "Dashboards over the shared Log Analytics workspace (obsview, an ASP.NET Core app): deploys, health, jobs and spend for every app on the shared Container Apps environment"
+    topics                  = ["azure", "container-apps", "dotnet", "observability"]
     generated_from_template = "template-repo-terraform-root"
     # A seventh tenant of azure-container-apps: its own resource group,
-    # identity and a scale-to-zero container app running obsview (a FastAPI
-    # dashboards app that replaced Grafana), reaching the shared environment
+    # identity and a scale-to-zero container app running obsview (an ASP.NET
+    # Core dashboards app that replaced Grafana, the estate's first .NET app,
+    # ported from FastAPI in November 2026), reaching the shared environment
     # by name. It keeps no state: every view is a query on the workspace.
     # Alerting stays in Azure Monitor, so nothing depends on it being awake.
     #
@@ -359,8 +360,9 @@ repos = {
     # inferred from the workflow files. `terraform-plan` and `container-build`
     # are the always-reporting gates over the path-filtered `plan` and `build`
     # jobs, and `changes` (ci-container-build's path filter) always runs.
-    # `test / Test` (ci-python.yml, obsview's tests) has no path filter and
-    # reported on every PR from observability#91 to #99.
+    # `test / Test` (ci-dotnet.yml, obsview's tests, through workflows'
+    # dotnet.yml; ci-python.yml until the .NET port, observability#127) has no
+    # path filter and reported on every PR from observability#91 to #99.
     # `build / Build obsview`, `plan / ...` and `terraform / Validate (...)`/
     # `terraform / Test (...)` are deliberately absent: when skipped they report
     # under a different context (`build`, `plan`) or a matrix placeholder, so a
@@ -446,7 +448,7 @@ repos = {
   }
 
   "dev-containers" = {
-    description = "Multi-arch container images every app builds from or deploys with - python-app, python-app-builder and placeholder - published to ghcr.io"
+    description = "Multi-arch container images every app builds from or deploys with - python-app, dotnet-app, their builders and placeholder - published to ghcr.io"
     topics      = ["docker", "ghcr", "azure"]
     # Referenced by tag from each app's Dockerfile and Terraform. It used to
     # build the dev-container images too (base, terraform, k8s); local tools now
