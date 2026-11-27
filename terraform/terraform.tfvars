@@ -208,24 +208,25 @@ repos = {
   }
 
   "repo-agent" = {
+    # Go since 2026-11-27 (repo-agent#196): the estate's first Go app.
     description = "Scheduled agent that scans every jay-withers repository for improvements and checks Renovate is working, then emails a digest"
-    topics      = ["azure", "python", "github-app", "renovate"]
+    topics      = ["azure", "go", "github-app", "renovate"]
     # The first tenant of azure-container-apps, and the proof that the
     # shared-environment split works: it owns its own resource group, Key Vault,
     # identity and job, and reaches the environment by name.
     #
-    # Reads GitHub as a read-only GitHub App and holds no state, so a repeat
-    # finding is re-derived from GitHub timestamps each week rather than
-    # remembered. Its checks are what keep the entries in this file honest - a
+    # Reads GitHub as a read-only GitHub App. What it remembers between runs
+    # (first-seen dates, suppressions) is one JSON blob in its own storage
+    # account. Its checks are what keep the entries in this file honest - a
     # missing description or topic list shows up in the weekly digest.
     #
     # Read literally off `gh pr checks` on repo-agent#2, not inferred from the
     # workflow files.
     #
-    # ci-container-build's `build (repoagent)` is deliberately absent: that
-    # workflow is filtered on its trigger (paths: src/**, Dockerfile, ...), so a
-    # docs-only PR never runs it and never reports, and a required check that
-    # never reports leaves the PR pending for ever rather than failing it.
+    # ci-container-build's `build / Build repoagent` is deliberately absent: it
+    # runs only when the image's paths change (cmd/**, internal/**, go.mod,
+    # Dockerfile, ...), so a docs-only PR never reports it. Its always-reporting
+    # `container-build` gate is required instead.
     required_status_checks = [
       { context = "pre-commit / Pre-commit" },
       { context = "test / Test" },
